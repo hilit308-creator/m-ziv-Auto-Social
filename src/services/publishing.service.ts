@@ -291,7 +291,7 @@ export class PublishingService {
     return response.data.id;
   }
 
-  private async publishToTikTok(content: any): Promise<string> {
+  private async publishToTikTok(_content: any): Promise<string> {
     throw new Error('TikTok publishing not yet implemented');
   }
 
@@ -365,19 +365,19 @@ export class PublishingService {
     throw new Error('Media processing timeout');
   }
 
-  private async uploadTwitterMedia(imageUrl: string): Promise<string> {
+  private async uploadTwitterMedia(_imageUrl: string): Promise<string> {
     throw new Error('Twitter media upload not yet implemented');
   }
 
   private async uploadLinkedInMedia(
-    imageUrl: string,
-    accessToken: string
+    _imageUrl: string,
+    _accessToken: string
   ): Promise<string> {
     throw new Error('LinkedIn media upload not yet implemented');
   }
 
-  private async savePostRecord(data: any): Promise<void> {
-    console.log('Saving post record:', data);
+  private async savePostRecord(_data: any): Promise<void> {
+    // Post record saving not yet implemented
   }
 
   private setupQueueProcessors(): void {
@@ -389,7 +389,7 @@ export class PublishingService {
     });
   }
 
-  async getBestPostingTimes(platform: string): Promise<Date[]> {
+  async getBestPostingTimes(_platform: string): Promise<Date[]> {
     return [
       new Date(Date.now() + 3600000),
       new Date(Date.now() + 7200000),
