@@ -9,6 +9,8 @@ import mzivRoutes from './routes/mziv.routes';
 import postsRoutes from './routes/posts.routes';
 import profileRoutes from './routes/profile.routes';
 import ideasRoutes from './routes/ideas.routes';
+import mediaRoutes from './routes/media.routes';
+import calendarRoutes from './routes/calendar.routes';
 
 dotenv.config();
 
@@ -42,6 +44,12 @@ app.use('/api/profile', profileRoutes);
 
 // Ideas/content suggestions routes
 app.use('/api/ideas', ideasRoutes);
+
+// Media upload routes
+app.use('/api/media', mediaRoutes);
+
+// Calendar routes
+app.use('/api/calendar', calendarRoutes);
 
 app.get('/', (_req: Request, res: Response) => {
   res.json({
@@ -77,6 +85,21 @@ app.get('/', (_req: Request, res: Response) => {
         generate: 'POST /api/ideas/generate',
         list: 'GET /api/ideas?used=false',
         markUsed: 'POST /api/ideas/:id/use',
+      },
+      media: {
+        status: 'GET /api/media/status',
+        uploadUrl: 'POST /api/media/upload/url',
+        uploadBase64: 'POST /api/media/upload/base64',
+        attach: 'POST /api/media/attach',
+        delete: 'DELETE /api/media/:publicId',
+      },
+      calendar: {
+        week: 'GET /api/calendar/week',
+        month: 'GET /api/calendar/month/:year/:month',
+        scheduled: 'GET /api/calendar/scheduled',
+        upcoming: 'GET /api/calendar/upcoming',
+        schedule: 'POST /api/calendar/schedule/:postId',
+        unschedule: 'POST /api/calendar/unschedule/:postId',
       },
       ai: {
         generatePost: 'POST /api/ai/generate-post',
