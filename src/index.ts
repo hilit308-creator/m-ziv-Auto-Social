@@ -31,7 +31,7 @@ app.use('/api/', limiter);
 // M-Ziv AI Social routes
 app.use('/api/v1', mzivRoutes);
 
-app.get('/', (req: Request, res: Response) => {
+app.get('/', (_req: Request, res: Response) => {
   res.json({
     name: 'M-Ziv Auto Social API',
     version: '1.0.0',
@@ -66,7 +66,7 @@ app.get('/', (req: Request, res: Response) => {
   });
 });
 
-app.get('/health', (req: Request, res: Response) => {
+app.get('/health', (_req: Request, res: Response) => {
   res.json({
     status: 'healthy',
     timestamp: new Date().toISOString(),
@@ -297,7 +297,7 @@ app.post('/api/shortcuts/execute', async (req: Request, res: Response, next: Nex
   }
 });
 
-app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   console.error('Error:', err);
 
   res.status(500).json({
@@ -307,7 +307,7 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   });
 });
 
-app.use((req: Request, res: Response) => {
+app.use((_req: Request, res: Response) => {
   res.status(404).json({
     success: false,
     error: 'Route not found',

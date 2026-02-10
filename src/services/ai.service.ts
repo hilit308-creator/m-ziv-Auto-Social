@@ -22,14 +22,14 @@ interface GeneratedContent {
 
 export class AIService {
   private openai: OpenAI;
-  private anthropic: Anthropic;
+  private _anthropic: Anthropic;
 
   constructor() {
     this.openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
     });
 
-    this.anthropic = new Anthropic({
+    this._anthropic = new Anthropic({
       apiKey: process.env.ANTHROPIC_API_KEY,
     });
   }
@@ -118,7 +118,7 @@ Return only the hashtags, one per line, without the # symbol.`;
       quality: 'hd',
     });
 
-    return response.data[0].url || '';
+    return response.data?.[0]?.url || '';
   }
 
   async analyzeContent(content: string): Promise<{
