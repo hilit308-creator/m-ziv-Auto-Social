@@ -8,6 +8,7 @@ import { publishingService } from './services/publishing.service';
 import mzivRoutes from './routes/mziv.routes';
 import postsRoutes from './routes/posts.routes';
 import profileRoutes from './routes/profile.routes';
+import ideasRoutes from './routes/ideas.routes';
 
 dotenv.config();
 
@@ -39,6 +40,9 @@ app.use('/api/posts', postsRoutes);
 // Profile management routes
 app.use('/api/profile', profileRoutes);
 
+// Ideas/content suggestions routes
+app.use('/api/ideas', ideasRoutes);
+
 app.get('/', (_req: Request, res: Response) => {
   res.json({
     name: 'M-Ziv Auto Social API',
@@ -65,6 +69,12 @@ app.get('/', (_req: Request, res: Response) => {
       profile: {
         get: 'GET /api/profile',
         update: 'PATCH /api/profile',
+      },
+      ideas: {
+        today: 'GET /api/ideas/today',
+        generate: 'POST /api/ideas/generate',
+        list: 'GET /api/ideas?used=false',
+        markUsed: 'POST /api/ideas/:id/use',
       },
       ai: {
         generatePost: 'POST /api/ai/generate-post',

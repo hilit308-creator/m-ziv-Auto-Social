@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { postsService, RewriteCommand } from '../services/posts.service';
+import { versionsService } from '../services/versions.service';
 
 const router = Router();
 
@@ -184,6 +185,52 @@ router.post('/:id/rewrite', async (req: Request, res: Response) => {
     return res.status(500).json({
       success: false,
       error: error.message || 'Failed to rewrite post',
+    });
+  }
+});
+
+router.get('/:id/versions', async (req: Request, res: Response) => {
+  try {
+    const versions = await versionsService.getVersions(req.params.id);
+
+    return res.json({
+      success: true,
+      data: versions,
+      count: versions.length,
+    });
+  } catch (error: any) {
+    console.error('Error fetching versions:', error);
+    return res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to fetch versions',
+    });
+  }
+});
+
+router.post('/:id/versions/:versionNumber/restore', async (req: Request, res: Response) => {
+  try {
+    const versionNumber = parseInt(req.params.versionNumber);
+    const success = await versionsService.restoreVersion(req.params.id, versionNumber);
+
+    if (!success) {
+      return res.status(404).json({
+        success: false,
+        error: 'Version not found',
+      });
+    }
+
+    const post = await postsService.getById(req.params.id);
+
+    return res.json({
+      success: true,
+      data: post,
+      message: `Restored to version ${versionNumber}`,
+    });
+  } catch (error: any) {
+    console.error('Error restoring version:', error);
+    return res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to restore version',
     });
   }
 });
