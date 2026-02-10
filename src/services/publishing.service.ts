@@ -380,14 +380,15 @@ export class PublishingService {
     // Post record saving not yet implemented
   }
 
-  private setupQueueProcessors(): void {
-    if (!this.publishQueue) return;
-    
-    this.publishQueue.process('scheduled-post', async (job: any) => {
-      const { platform, options } = job.data;
-      return this.publishToPlatform(platform, options);
-    });
-  }
+  // Queue processors disabled - Redis not configured
+  // private setupQueueProcessors(): void {
+  //   if (!this.publishQueue) return;
+  //   
+  //   this.publishQueue.process('scheduled-post', async (job: any) => {
+  //     const { platform, options } = job.data;
+  //     return this.publishToPlatform(platform, options);
+  //   });
+  // }
 
   async getBestPostingTimes(_platform: string): Promise<Date[]> {
     return [
