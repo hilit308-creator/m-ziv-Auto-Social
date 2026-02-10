@@ -13,6 +13,10 @@ import mediaRoutes from './routes/media.routes';
 import calendarRoutes from './routes/calendar.routes';
 import schedulerRoutes from './routes/scheduler.routes';
 import authRoutes from './routes/auth.routes';
+import publishRoutes from './routes/publish.routes';
+import analyticsRoutes from './routes/analytics.routes';
+import reportsRoutes from './routes/reports.routes';
+import autoReplyRoutes from './routes/auto-reply.routes';
 
 dotenv.config();
 
@@ -58,6 +62,18 @@ app.use('/api/scheduler', schedulerRoutes);
 
 // Social auth routes
 app.use('/api/auth', authRoutes);
+
+// Auto-publish routes
+app.use('/api/publish', publishRoutes);
+
+// Analytics routes
+app.use('/api/analytics', analyticsRoutes);
+
+// Reports routes
+app.use('/api/reports', reportsRoutes);
+
+// Auto-reply routes
+app.use('/api/auto-reply', autoReplyRoutes);
 
 app.get('/', (_req: Request, res: Response) => {
   res.json({
