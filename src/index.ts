@@ -65,6 +65,8 @@ app.get('/', (_req: Request, res: Response) => {
         delete: 'DELETE /api/posts/:id',
         rewrite: 'POST /api/posts/:id/rewrite',
         next: 'GET /api/posts/next',
+        versions: 'GET /api/posts/:id/versions',
+        restore: 'POST /api/posts/:id/versions/:num/restore',
       },
       profile: {
         get: 'GET /api/profile',
