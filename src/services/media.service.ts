@@ -35,18 +35,17 @@ export interface MediaItem {
 }
 
 export class MediaService {
-  private isConfigured: boolean;
-
   constructor() {
-    this.isConfigured = !!(
+    // Cloudinary config is set at module load
+  }
+
+  isReady(): boolean {
+    // Check dynamically each time
+    return !!(
       process.env.CLOUDINARY_CLOUD_NAME &&
       process.env.CLOUDINARY_API_KEY &&
       process.env.CLOUDINARY_API_SECRET
     );
-  }
-
-  isReady(): boolean {
-    return this.isConfigured;
   }
 
   async uploadFromUrl(url: string, options?: {
@@ -54,7 +53,7 @@ export class MediaService {
     resource_type?: 'image' | 'video' | 'auto';
     postId?: string;
   }): Promise<MediaUploadResult> {
-    if (!this.isConfigured) {
+    if (!this.isReady()) {
       throw new Error('Cloudinary is not configured. Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET environment variables.');
     }
 
@@ -82,7 +81,7 @@ export class MediaService {
     resource_type?: 'image' | 'video';
     postId?: string;
   }): Promise<MediaUploadResult> {
-    if (!this.isConfigured) {
+    if (!this.isReady()) {
       throw new Error('Cloudinary is not configured');
     }
 
@@ -110,7 +109,7 @@ export class MediaService {
   }
 
   async delete(publicId: string): Promise<boolean> {
-    if (!this.isConfigured) {
+    if (!this.isReady()) {
       throw new Error('Cloudinary is not configured');
     }
 
