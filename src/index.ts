@@ -11,6 +11,8 @@ import profileRoutes from './routes/profile.routes';
 import ideasRoutes from './routes/ideas.routes';
 import mediaRoutes from './routes/media.routes';
 import calendarRoutes from './routes/calendar.routes';
+import schedulerRoutes from './routes/scheduler.routes';
+import authRoutes from './routes/auth.routes';
 
 dotenv.config();
 
@@ -50,6 +52,12 @@ app.use('/api/media', mediaRoutes);
 
 // Calendar routes
 app.use('/api/calendar', calendarRoutes);
+
+// Scheduler routes
+app.use('/api/scheduler', schedulerRoutes);
+
+// Social auth routes
+app.use('/api/auth', authRoutes);
 
 app.get('/', (_req: Request, res: Response) => {
   res.json({
