@@ -6,6 +6,8 @@ import dotenv from 'dotenv';
 import { aiService } from './services/ai.service';
 import { publishingService } from './services/publishing.service';
 import mzivRoutes from './routes/mziv.routes';
+import postsRoutes from './routes/posts.routes';
+import profileRoutes from './routes/profile.routes';
 
 dotenv.config();
 
@@ -31,6 +33,12 @@ app.use('/api/', limiter);
 // M-Ziv AI Social routes
 app.use('/api/v1', mzivRoutes);
 
+// Posts management routes
+app.use('/api/posts', postsRoutes);
+
+// Profile management routes
+app.use('/api/profile', profileRoutes);
+
 app.get('/', (_req: Request, res: Response) => {
   res.json({
     name: 'M-Ziv Auto Social API',
@@ -45,15 +53,24 @@ app.get('/', (_req: Request, res: Response) => {
         postPack: 'POST /api/v1/generate/post-pack (RECOMMENDED)',
         rewrite: 'POST /api/v1/rewrite',
       },
+      posts: {
+        create: 'POST /api/posts',
+        list: 'GET /api/posts?status=draft',
+        get: 'GET /api/posts/:id',
+        update: 'PATCH /api/posts/:id',
+        delete: 'DELETE /api/posts/:id',
+        rewrite: 'POST /api/posts/:id/rewrite',
+        next: 'GET /api/posts/next',
+      },
+      profile: {
+        get: 'GET /api/profile',
+        update: 'PATCH /api/profile',
+      },
       ai: {
         generatePost: 'POST /api/ai/generate-post',
         generateHashtags: 'POST /api/ai/generate-hashtags',
         generateImage: 'POST /api/ai/generate-image',
         generateReply: 'POST /api/ai/generate-reply',
-      },
-      posts: {
-        publish: 'POST /api/posts/publish',
-        schedule: 'POST /api/posts/schedule',
       },
       analytics: {
         bestTimes: 'GET /api/analytics/best-times',

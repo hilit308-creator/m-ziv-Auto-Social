@@ -1,0 +1,98 @@
+// Prisma Schema for M-Ziv Auto Social
+// Database: SQLite (lightweight, no external dependencies)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Brand Profile - הגדרות קבועות של העסק
+model BrandProfile {
+  id                String   @id @default(cuid())
+  name              String   @default("M-Ziv")
+  businessType      String   @default("ייעוץ עסקי")
+  tone              String   @default("מקצועי וחם")
+  language          String   @default("עברית")
+  targetAudience    String   @default("בעלי עסקים קטנים ובינוניים")
+  defaultCta        String   @default("צרו קשר לייעוץ ראשוני")
+  emojiLevel        String   @default("low") // none, low, medium
+  maxWordsInstagram Int      @default(50)
+  maxWordsFacebook  Int      @default(100)
+  maxWordsTiktok    Int      @default(30)
+  maxWordsLinkedin  Int      @default(150)
+  maxWordsYoutube   Int      @default(200)
+  brandedHashtags   String   @default("#MZiv,#יועציםעסקיים") // comma separated
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+// Post - פוסט שנוצר
+model Post {
+  id              String        @id @default(cuid())
+  topic           String        // נושא הפוסט
+  voiceNotes      String?       // תמליל הערות קוליות
+  status          String        @default("draft") // draft, scheduled, published, failed
+  
+  // תוכן לכל פלטפורמה (JSON string)
+  instagramCaption   String?
+  instagramHashtags  String?    // comma separated
+  facebookCaption    String?
+  tiktokCaption      String?
+  tiktokHashtags     String?
+  youtubeTitle       String?
+  youtubeDescription String?
+  youtubeTags        String?
+  linkedinCaption    String?
+  
+  // מדיה
+  mediaUrl        String?
+  mediaType       String?       // image, video
+  
+  // תזמון
+  scheduledAt     DateTime?
+  publishedAt     DateTime?
+  
+  // מטא
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  // גרסאות
+  versions        PostVersion[]
+}
+
+// PostVersion - היסטוריית שינויים
+model PostVersion {
+  id              String   @id @default(cuid())
+  postId          String
+  post            Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  versionNumber   Int
+  command         String?  // הפקודה ששימשה לשכתוב (shorter, more_professional, etc.)
+  
+  // תוכן הגרסה
+  instagramCaption   String?
+  instagramHashtags  String?
+  facebookCaption    String?
+  tiktokCaption      String?
+  tiktokHashtags     String?
+  youtubeTitle       String?
+  youtubeDescription String?
+  youtubeTags        String?
+  linkedinCaption    String?
+  
+  createdAt       DateTime @default(now())
+}
+
+// ContentIdea - רעיונות לתוכן יומי
+model ContentIdea {
+  id          String   @id @default(cuid())
+  topic       String
+  description String?
+  category    String?  // tips, story, promo, educational
+  used        Boolean  @default(false)
+  usedAt      DateTime?
+  createdAt   DateTime @default(now())
+}
