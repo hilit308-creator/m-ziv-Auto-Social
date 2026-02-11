@@ -96,3 +96,80 @@ model ContentIdea {
   usedAt      DateTime?
   createdAt   DateTime @default(now())
 }
+
+// User - משתמש במערכת
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  password      String   // hashed
+  name          String?
+  plan          String   @default("free") // free, pro, enterprise
+  planExpiresAt DateTime?
+  
+  // Brand settings
+  brandName     String?
+  brandTone     String?
+  brandColors   String?  // JSON array
+  brandLogo     String?
+  
+  // Relations
+  socialAccounts SocialAccount[]
+  templates      AITemplate[]
+  auditLogs      AuditLog[]
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+// SocialAccount - חשבון רשת חברתית מחובר
+model SocialAccount {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  platform      String   // instagram, facebook, twitter, linkedin, tiktok, youtube
+  accountId     String   // Platform's account ID
+  accountName   String?  // Display name
+  accessToken   String
+  refreshToken  String?
+  tokenExpiry   DateTime?
+  isActive      Boolean  @default(true)
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@unique([userId, platform, accountId])
+}
+
+// AITemplate - תבניות AI לפלטפורמות
+model AITemplate {
+  id          String   @id @default(cuid())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  name        String
+  platform    String   // instagram, facebook, twitter, linkedin, tiktok, youtube, all
+  category    String   // promo, educational, story, engagement, announcement
+  template    String   // The actual prompt template
+  variables   String?  // JSON array of variable names
+  isDefault   Boolean  @default(false)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// AuditLog - לוג פעולות
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  action      String   // login, logout, create_post, publish, delete, etc.
+  resource    String?  // post, template, account, etc.
+  resourceId  String?
+  details     String?  // JSON with additional info
+  ipAddress   String?
+  userAgent   String?
+  
+  createdAt   DateTime @default(now())
+}

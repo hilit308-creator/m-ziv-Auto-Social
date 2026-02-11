@@ -17,6 +17,12 @@ import publishRoutes from './routes/publish.routes';
 import analyticsRoutes from './routes/analytics.routes';
 import reportsRoutes from './routes/reports.routes';
 import autoReplyRoutes from './routes/auto-reply.routes';
+import videoRoutes from './routes/video.routes';
+import twitterRoutes from './routes/twitter.routes';
+import userRoutes from './routes/user.routes';
+import templatesRoutes from './routes/templates.routes';
+import auditRoutes from './routes/audit.routes';
+import spamRoutes from './routes/spam.routes';
 
 dotenv.config();
 
@@ -74,6 +80,24 @@ app.use('/api/reports', reportsRoutes);
 
 // Auto-reply routes
 app.use('/api/auto-reply', autoReplyRoutes);
+
+// Video generation routes
+app.use('/api/video', videoRoutes);
+
+// Twitter/X routes
+app.use('/api/twitter', twitterRoutes);
+
+// User auth routes
+app.use('/api/users', userRoutes);
+
+// Templates routes
+app.use('/api/templates', templatesRoutes);
+
+// Audit logs routes
+app.use('/api/audit', auditRoutes);
+
+// Spam filter routes
+app.use('/api/spam', spamRoutes);
 
 app.get('/', (_req: Request, res: Response) => {
   res.json({
