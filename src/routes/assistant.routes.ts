@@ -72,6 +72,39 @@ router.post('/batch-suggest', async (req: Request, res: Response, next: NextFunc
 });
 
 // ============================================
+// Speech to Text
+// ============================================
+
+// POST /assistant/transcribe - Transcribe audio to text
+router.post('/transcribe', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { audioUrl, audioBase64, filename } = req.body;
+
+    if (!audioUrl && !audioBase64) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required field: audioUrl or audioBase64',
+      });
+    }
+
+    let result;
+    if (audioUrl) {
+      result = await assistantService.transcribeFromUrl(audioUrl);
+    } else {
+      const buffer = Buffer.from(audioBase64, 'base64');
+      result = await assistantService.transcribeAudio(buffer, filename || 'audio.webm');
+    }
+
+    res.json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ============================================
 // Component 2: Voice First Creation
 // ============================================
 

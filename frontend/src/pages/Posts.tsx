@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plus, Edit, Trash2, Send, RefreshCw } from 'lucide-react';
+import { Plus, Edit, Trash2, Send, RefreshCw, Image, Calendar, Instagram, Facebook, Linkedin, Youtube, Clock, Sparkles } from 'lucide-react';
 import { postsApi, publishApi } from '../services/api';
 
 interface Post {
@@ -20,6 +20,11 @@ export default function Posts() {
   const [newPostTopic, setNewPostTopic] = useState('');
   const [creating, setCreating] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const [newPostImage, setNewPostImage] = useState<string>('');
+  const [newPostPlatforms, setNewPostPlatforms] = useState<string[]>(['instagram', 'facebook', 'linkedin']);
+  const [newPostSchedule, setNewPostSchedule] = useState<string>('');
+  const [newPostTime, setNewPostTime] = useState<string>('');
+  const [generateImage, setGenerateImage] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [rewriting, setRewriting] = useState<string | null>(null);
   const [publishing, setPublishing] = useState<string | null>(null);
@@ -222,11 +227,13 @@ export default function Posts() {
       {/* Create Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-lg">
-            <h2 className="text-xl font-bold text-gray-800 mb-4">יצירת פוסט חדש</h2>
+          <div className="bg-white rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <h2 className="text-xl font-bold text-gray-800 mb-6">יצירת פוסט חדש</h2>
             
-            <div className="mb-4">
+            {/* Topic */}
+            <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-2">
+                <Sparkles size={16} className="inline ml-1 text-brand-primary" />
                 נושא הפוסט
               </label>
               <input
@@ -241,9 +248,129 @@ export default function Posts() {
               </p>
             </div>
 
-            <div className="flex gap-3 justify-end">
+            {/* Platforms */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                פלטפורמות לפרסום
+              </label>
+              <div className="flex flex-wrap gap-3">
+                {[
+                  { id: 'instagram', name: 'אינסטגרם', icon: Instagram, color: 'bg-pink-100 text-pink-600 border-pink-300' },
+                  { id: 'facebook', name: 'פייסבוק', icon: Facebook, color: 'bg-blue-100 text-blue-600 border-blue-300' },
+                  { id: 'linkedin', name: 'לינקדאין', icon: Linkedin, color: 'bg-sky-100 text-sky-600 border-sky-300' },
+                  { id: 'youtube', name: 'יוטיוב', icon: Youtube, color: 'bg-red-100 text-red-600 border-red-300' },
+                ].map((platform) => (
+                  <button
+                    key={platform.id}
+                    onClick={() => {
+                      if (newPostPlatforms.includes(platform.id)) {
+                        setNewPostPlatforms(newPostPlatforms.filter(p => p !== platform.id));
+                      } else {
+                        setNewPostPlatforms([...newPostPlatforms, platform.id]);
+                      }
+                    }}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-all ${
+                      newPostPlatforms.includes(platform.id) 
+                        ? platform.color + ' border-current' 
+                        : 'bg-gray-50 text-gray-400 border-gray-200'
+                    }`}
+                  >
+                    <platform.icon size={18} />
+                    {platform.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Image Options */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                <Image size={16} className="inline ml-1 text-brand-primary" />
+                תמונה
+              </label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div 
+                  onClick={() => setGenerateImage(true)}
+                  className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                    generateImage ? 'border-brand-primary bg-brand-light' : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="flex items-center gap-3 mb-2">
+                    <Sparkles size={20} className="text-brand-primary" />
+                    <span className="font-medium">צור תמונה עם AI</span>
+                  </div>
+                  <p className="text-sm text-gray-500">DALL-E יצור תמונה מותאמת לפוסט</p>
+                </div>
+                <div 
+                  onClick={() => setGenerateImage(false)}
+                  className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                    !generateImage ? 'border-brand-primary bg-brand-light' : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="flex items-center gap-3 mb-2">
+                    <Image size={20} className="text-brand-primary" />
+                    <span className="font-medium">העלה תמונה</span>
+                  </div>
+                  <p className="text-sm text-gray-500">העלה תמונה מהמחשב שלך</p>
+                </div>
+              </div>
+              
+              {!generateImage && (
+                <div className="mt-4">
+                  <input
+                    type="text"
+                    value={newPostImage}
+                    onChange={(e) => setNewPostImage(e.target.value)}
+                    placeholder="הכנס קישור לתמונה או URL"
+                    className="input"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Scheduling */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                <Calendar size={16} className="inline ml-1 text-brand-primary" />
+                תזמון
+              </label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">תאריך</label>
+                  <input
+                    type="date"
+                    value={newPostSchedule}
+                    onChange={(e) => setNewPostSchedule(e.target.value)}
+                    className="input"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">שעה</label>
+                  <input
+                    type="time"
+                    value={newPostTime}
+                    onChange={(e) => setNewPostTime(e.target.value)}
+                    className="input"
+                  />
+                </div>
+              </div>
+              <p className="text-sm text-gray-500 mt-2 flex items-center gap-1">
+                <Clock size={14} />
+                השאר ריק לפרסום מיידי
+              </p>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3 justify-end border-t pt-4">
               <button 
-                onClick={() => setShowCreateModal(false)}
+                onClick={() => {
+                  setShowCreateModal(false);
+                  setNewPostTopic('');
+                  setNewPostImage('');
+                  setNewPostSchedule('');
+                  setNewPostTime('');
+                  setGenerateImage(false);
+                }}
                 className="btn-secondary"
               >
                 ביטול
@@ -256,12 +383,12 @@ export default function Posts() {
                 {creating ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    יוצר...
+                    יוצר עם AI...
                   </>
                 ) : (
                   <>
-                    <Plus size={18} />
-                    צור פוסט
+                    <Sparkles size={18} />
+                    צור פוסט עם AI
                   </>
                 )}
               </button>

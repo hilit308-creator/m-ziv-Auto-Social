@@ -1,6 +1,8 @@
 import OpenAI from 'openai';
 import { PrismaClient } from '@prisma/client';
 import { mzivService } from './mziv.service';
+import fs from 'fs';
+import path from 'path';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -120,6 +122,67 @@ export class AssistantService {
     this.openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
     });
+  }
+
+  // ============================================
+  // Speech to Text (Whisper API)
+  // ============================================
+
+  async transcribeAudio(audioBuffer: Buffer, filename: string): Promise<{
+    transcript: string;
+    language: string;
+    duration: number;
+  }> {
+    // Create a temporary file for the audio
+    const tempDir = path.join(process.cwd(), 'temp');
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
+    }
+    
+    const tempFilePath = path.join(tempDir, filename);
+    fs.writeFileSync(tempFilePath, audioBuffer);
+
+    try {
+      // Use OpenAI Whisper API for transcription
+      const transcription = await this.openai.audio.transcriptions.create({
+        file: fs.createReadStream(tempFilePath),
+        model: 'whisper-1',
+        language: 'he', // Hebrew
+        response_format: 'verbose_json',
+      });
+
+      // Clean up temp file
+      fs.unlinkSync(tempFilePath);
+
+      return {
+        transcript: transcription.text,
+        language: (transcription as any).language || 'he',
+        duration: (transcription as any).duration || 0,
+      };
+    } catch (error) {
+      // Clean up temp file on error
+      if (fs.existsSync(tempFilePath)) {
+        fs.unlinkSync(tempFilePath);
+      }
+      throw error;
+    }
+  }
+
+  async transcribeFromUrl(audioUrl: string): Promise<{
+    transcript: string;
+    language: string;
+    duration: number;
+  }> {
+    // Download audio from URL
+    const response = await fetch(audioUrl);
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    
+    // Extract filename from URL or use default
+    const urlParts = audioUrl.split('/');
+    const filename = urlParts[urlParts.length - 1] || 'audio.mp3';
+    
+    return this.transcribeAudio(buffer, filename);
   }
 
   // ============================================

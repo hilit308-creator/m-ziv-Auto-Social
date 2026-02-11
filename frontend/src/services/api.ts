@@ -119,6 +119,10 @@ export const spamApi = {
 
 // AI Personal Assistant
 export const assistantApi = {
+  // Speech to Text
+  transcribe: (data: { audioUrl?: string; audioBase64?: string; filename?: string }) => 
+    api.post('/api/assistant/transcribe', data),
+  
   // Energy Mode
   getEnergyProfile: () => api.get('/api/assistant/energy-profile'),
   updateEnergyProfile: (data: any) => api.patch('/api/assistant/energy-profile', data),
