@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Video, Play, Download, RefreshCw, Sparkles } from 'lucide-react';
+import { videoApi } from '../services/api';
 
 interface VideoResult {
   id: string;
@@ -22,25 +23,20 @@ export default function VideoPage() {
     setResult(null);
 
     try {
-      const response = await fetch('/api/video/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prompt,
-          duration,
-          aspect_ratio: aspectRatio,
-        }),
+      const response = await videoApi.generate({
+        prompt,
+        duration,
+        aspect_ratio: aspectRatio,
       });
 
-      const data = await response.json();
-      if (data.success) {
-        setResult(data.data);
+      if (response.data.success) {
+        setResult(response.data.data);
       } else {
-        alert(data.error || 'Failed to generate video');
+        alert(response.data.error || 'Failed to generate video');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error generating video:', error);
-      alert('Failed to connect to API');
+      alert(error.response?.data?.error || 'Failed to connect to API');
     } finally {
       setGenerating(false);
     }

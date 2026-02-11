@@ -87,4 +87,34 @@ export const mediaApi = {
   uploadFromUrl: (url: string) => api.post('/api/media/upload/url', { url }),
 };
 
+// Video
+export const videoApi = {
+  getStatus: () => api.get('/api/video/status'),
+  generate: (data: { prompt: string; duration?: number; aspect_ratio?: string }) => 
+    api.post('/api/video/generate', data),
+  checkStatus: (videoId: string, provider: string) => 
+    api.get(`/api/video/status/${videoId}`, { params: { provider } }),
+  generateReel: (postId: string) => api.post(`/api/video/generate/reel/${postId}`),
+  generateStory: (topic: string, style?: string) => 
+    api.post('/api/video/generate/story', { topic, style }),
+};
+
+// Templates
+export const templatesApi = {
+  getAll: (platform?: string, category?: string) => 
+    api.get('/api/templates', { params: { platform, category } }),
+  getById: (id: string) => api.get(`/api/templates/${id}`),
+  create: (data: any) => api.post('/api/templates', data),
+  update: (id: string, data: any) => api.patch(`/api/templates/${id}`, data),
+  delete: (id: string) => api.delete(`/api/templates/${id}`),
+  seed: () => api.post('/api/templates/seed'),
+};
+
+// Spam
+export const spamApi = {
+  check: (text: string) => api.post('/api/spam/check', { text }),
+  analyze: (comment: string) => api.post('/api/spam/analyze', { comment }),
+  getKeywords: () => api.get('/api/spam/keywords'),
+};
+
 export default api;

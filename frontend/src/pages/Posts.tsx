@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Plus, Edit, Trash2, Send, RefreshCw } from 'lucide-react';
-import { postsApi } from '../services/api';
+import { postsApi, publishApi } from '../services/api';
 
 interface Post {
   id: string;
@@ -19,6 +19,10 @@ export default function Posts() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newPostTopic, setNewPostTopic] = useState('');
   const [creating, setCreating] = useState(false);
+  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [rewriting, setRewriting] = useState<string | null>(null);
+  const [publishing, setPublishing] = useState<string | null>(null);
 
   useEffect(() => {
     fetchPosts();
@@ -59,6 +63,39 @@ export default function Posts() {
       fetchPosts();
     } catch (error) {
       console.error('Error deleting post:', error);
+    }
+  };
+
+  const editPost = (post: Post) => {
+    setSelectedPost(post);
+    setShowEditModal(true);
+  };
+
+  const rewritePost = async (id: string) => {
+    setRewriting(id);
+    try {
+      await postsApi.rewrite(id, 'more_professional');
+      fetchPosts();
+      alert('הפוסט שוכתב בהצלחה!');
+    } catch (error) {
+      console.error('Error rewriting post:', error);
+      alert('שגיאה בשכתוב');
+    } finally {
+      setRewriting(null);
+    }
+  };
+
+  const publishPost = async (id: string) => {
+    setPublishing(id);
+    try {
+      await publishApi.publish(id);
+      fetchPosts();
+      alert('הפוסט פורסם בהצלחה!');
+    } catch (error: any) {
+      console.error('Error publishing post:', error);
+      alert(error.response?.data?.error || 'שגיאה בפרסום');
+    } finally {
+      setPublishing(null);
     }
   };
 
@@ -135,18 +172,41 @@ export default function Posts() {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex gap-2">
-                      <button className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg">
+                      <button 
+                        onClick={() => editPost(post)}
+                        className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
+                        title="עריכה"
+                      >
                         <Edit size={18} />
                       </button>
-                      <button className="p-2 text-gray-500 hover:text-green-600 hover:bg-green-50 rounded-lg">
-                        <Send size={18} />
+                      <button 
+                        onClick={() => publishPost(post.id)}
+                        disabled={publishing === post.id || post.status === 'published'}
+                        className="p-2 text-gray-500 hover:text-green-600 hover:bg-green-50 rounded-lg disabled:opacity-50"
+                        title="פרסום"
+                      >
+                        {publishing === post.id ? (
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
+                        ) : (
+                          <Send size={18} />
+                        )}
                       </button>
-                      <button className="p-2 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded-lg">
-                        <RefreshCw size={18} />
+                      <button 
+                        onClick={() => rewritePost(post.id)}
+                        disabled={rewriting === post.id}
+                        className="p-2 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded-lg disabled:opacity-50"
+                        title="שכתב מחדש"
+                      >
+                        {rewriting === post.id ? (
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600"></div>
+                        ) : (
+                          <RefreshCw size={18} />
+                        )}
                       </button>
                       <button 
                         onClick={() => deletePost(post.id)}
                         className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg"
+                        title="מחיקה"
                       >
                         <Trash2 size={18} />
                       </button>
@@ -204,6 +264,89 @@ export default function Posts() {
                     צור פוסט
                   </>
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {showEditModal && selectedPost && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto">
+            <h2 className="text-xl font-bold text-gray-800 mb-4">עריכת פוסט</h2>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">נושא</label>
+                <input
+                  type="text"
+                  value={selectedPost.topic}
+                  onChange={(e) => setSelectedPost({ ...selectedPost, topic: e.target.value })}
+                  className="input"
+                />
+              </div>
+
+              {selectedPost.instagramCaption && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">אינסטגרם</label>
+                  <textarea
+                    value={selectedPost.instagramCaption}
+                    onChange={(e) => setSelectedPost({ ...selectedPost, instagramCaption: e.target.value })}
+                    className="input min-h-[100px]"
+                  />
+                </div>
+              )}
+
+              {selectedPost.facebookCaption && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">פייסבוק</label>
+                  <textarea
+                    value={selectedPost.facebookCaption}
+                    onChange={(e) => setSelectedPost({ ...selectedPost, facebookCaption: e.target.value })}
+                    className="input min-h-[100px]"
+                  />
+                </div>
+              )}
+
+              {selectedPost.linkedinCaption && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">לינקדאין</label>
+                  <textarea
+                    value={selectedPost.linkedinCaption}
+                    onChange={(e) => setSelectedPost({ ...selectedPost, linkedinCaption: e.target.value })}
+                    className="input min-h-[100px]"
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-3 justify-end mt-6">
+              <button 
+                onClick={() => {
+                  setShowEditModal(false);
+                  setSelectedPost(null);
+                }}
+                className="btn-secondary"
+              >
+                ביטול
+              </button>
+              <button 
+                onClick={async () => {
+                  try {
+                    await postsApi.update(selectedPost.id, selectedPost);
+                    setShowEditModal(false);
+                    setSelectedPost(null);
+                    fetchPosts();
+                    alert('הפוסט עודכן בהצלחה!');
+                  } catch (error) {
+                    console.error('Error updating post:', error);
+                    alert('שגיאה בעדכון');
+                  }
+                }}
+                className="btn-primary"
+              >
+                שמור שינויים
               </button>
             </div>
           </div>
