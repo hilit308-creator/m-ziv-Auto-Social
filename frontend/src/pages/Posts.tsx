@@ -60,16 +60,46 @@ export default function Posts() {
   };
 
   const createPost = async () => {
-    if (!newPostTopic.trim()) return;
+    if (!newPostTopic.trim()) {
+      alert('נא להזין נושא לפוסט');
+      return;
+    }
     
     setCreating(true);
     try {
-      await postsApi.create({ topic: newPostTopic });
-      setNewPostTopic('');
-      setShowCreateModal(false);
-      fetchPosts();
-    } catch (error) {
+      console.log('Creating post with topic:', newPostTopic);
+      
+      const postData = {
+        topic: newPostTopic,
+        platforms: newPostPlatforms,
+        image_url: newPostImage || undefined,
+        generate_image: generateImage,
+        scheduled_at: newPostSchedule && newPostTime 
+          ? new Date(`${newPostSchedule}T${newPostTime}`).toISOString() 
+          : undefined,
+      };
+      
+      console.log('Post data:', postData);
+      
+      const response = await postsApi.create(postData);
+      console.log('Response:', response.data);
+      
+      if (response.data.success) {
+        setNewPostTopic('');
+        setNewPostImage('');
+        setNewPostSchedule('');
+        setNewPostTime('');
+        setGenerateImage(false);
+        setUploadedImagePreview(null);
+        setShowCreateModal(false);
+        fetchPosts();
+        alert('הפוסט נוצר בהצלחה! 🎉');
+      } else {
+        alert(response.data.error || 'שגיאה ביצירת הפוסט');
+      }
+    } catch (error: any) {
       console.error('Error creating post:', error);
+      alert(error.response?.data?.error || 'שגיאה בחיבור לשרת - בדוק שהשרת פועל');
     } finally {
       setCreating(false);
     }
