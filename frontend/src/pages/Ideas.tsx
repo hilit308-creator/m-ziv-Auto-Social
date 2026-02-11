@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Lightbulb, RefreshCw, Check, Plus } from 'lucide-react';
+import { Lightbulb, RefreshCw, Check, Plus, Loader2 } from 'lucide-react';
 import { ideasApi, postsApi } from '../services/api';
 
 interface Idea {
@@ -16,10 +16,23 @@ export default function Ideas() {
   const [todayIdea, setTodayIdea] = useState<Idea | null>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const [creatingPostId, setCreatingPostId] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     fetchData();
   }, []);
+
+  const showSuccess = (message: string) => {
+    setSuccessMessage(message);
+    setTimeout(() => setSuccessMessage(null), 3000);
+  };
+
+  const showError = (message: string) => {
+    setErrorMessage(message);
+    setTimeout(() => setErrorMessage(null), 5000);
+  };
 
   const fetchData = async () => {
     try {
@@ -31,6 +44,7 @@ export default function Ideas() {
       setTodayIdea(todayRes.data.data);
     } catch (error) {
       console.error('Error fetching ideas:', error);
+      showError('שגיאה בטעינת רעיונות');
     } finally {
       setLoading(false);
     }
@@ -40,22 +54,50 @@ export default function Ideas() {
     setGenerating(true);
     try {
       await ideasApi.generate(5);
-      fetchData();
+      await fetchData();
+      showSuccess('רעיונות חדשים נוצרו! 🎉');
     } catch (error) {
       console.error('Error generating ideas:', error);
+      showError('שגיאה ביצירת רעיונות');
     } finally {
       setGenerating(false);
     }
   };
 
   const createPostFromIdea = async (idea: Idea) => {
+    setCreatingPostId(idea.id);
     try {
-      await postsApi.create({ topic: idea.topic });
-      await ideasApi.markUsed(idea.id);
-      fetchData();
-      alert('הפוסט נוצר בהצלחה!');
-    } catch (error) {
+      console.log('Creating post from idea:', idea.topic);
+      
+      // Create post with timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+      
+      const response = await postsApi.create({ topic: idea.topic });
+      clearTimeout(timeoutId);
+      
+      console.log('Post created:', response.data);
+      
+      if (response.data.success) {
+        try {
+          await ideasApi.markUsed(idea.id);
+        } catch (markError) {
+          console.log('Could not mark idea as used:', markError);
+        }
+        await fetchData();
+        showSuccess('הפוסט נוצר בהצלחה! 🚀');
+      } else {
+        showError(response.data.error || 'שגיאה ביצירת הפוסט');
+      }
+    } catch (error: any) {
       console.error('Error creating post:', error);
+      if (error.name === 'AbortError') {
+        showError('הבקשה ארכה יותר מדי זמן. נסה שוב.');
+      } else {
+        showError(error.response?.data?.error || 'שגיאה ביצירת הפוסט - בדוק את החיבור לשרת');
+      }
+    } finally {
+      setCreatingPostId(null);
     }
   };
 
@@ -91,6 +133,20 @@ export default function Ideas() {
 
   return (
     <div>
+      {/* Success Toast */}
+      {successMessage && (
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-full shadow-lg z-50 animate-bounce">
+          {successMessage}
+        </div>
+      )}
+
+      {/* Error Toast */}
+      {errorMessage && (
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-red-500 text-white px-6 py-3 rounded-full shadow-lg z-50">
+          {errorMessage}
+        </div>
+      )}
+
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold text-gray-800">רעיונות לתוכן</h1>
         <button 
@@ -128,10 +184,20 @@ export default function Ideas() {
               <p className="text-gray-600 mb-4">{todayIdea.description}</p>
               <button 
                 onClick={() => createPostFromIdea(todayIdea)}
-                className="btn-primary flex items-center gap-2"
+                disabled={creatingPostId === todayIdea.id}
+                className="btn-primary flex items-center gap-2 disabled:opacity-50"
               >
-                <Plus size={18} />
-                צור פוסט מהרעיון
+                {creatingPostId === todayIdea.id ? (
+                  <>
+                    <Loader2 size={18} className="animate-spin" />
+                    יוצר פוסט...
+                  </>
+                ) : (
+                  <>
+                    <Plus size={18} />
+                    צור פוסט מהרעיון
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -161,10 +227,20 @@ export default function Ideas() {
             {!idea.used && (
               <button 
                 onClick={() => createPostFromIdea(idea)}
-                className="btn-secondary w-full flex items-center justify-center gap-2"
+                disabled={creatingPostId === idea.id}
+                className="btn-secondary w-full flex items-center justify-center gap-2 disabled:opacity-50"
               >
-                <Plus size={16} />
-                צור פוסט
+                {creatingPostId === idea.id ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    יוצר פוסט...
+                  </>
+                ) : (
+                  <>
+                    <Plus size={16} />
+                    צור פוסט
+                  </>
+                )}
               </button>
             )}
           </div>
