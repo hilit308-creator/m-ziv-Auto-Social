@@ -69,12 +69,13 @@ export default function Ideas() {
     try {
       console.log('Creating post from idea:', idea.topic);
       
-      // Create post with timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
-      
-      const response = await postsApi.create({ topic: idea.topic });
-      clearTimeout(timeoutId);
+      // Create post with 15 second timeout
+      const response = await Promise.race([
+        postsApi.create({ topic: idea.topic }),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('timeout')), 15000)
+        )
+      ]) as any;
       
       console.log('Post created:', response.data);
       
@@ -91,10 +92,10 @@ export default function Ideas() {
       }
     } catch (error: any) {
       console.error('Error creating post:', error);
-      if (error.name === 'AbortError') {
-        showError('הבקשה ארכה יותר מדי זמן. נסה שוב.');
+      if (error.message === 'timeout') {
+        showError('השרת לא מגיב. בדקי שהשרת ב-Railway פועל.');
       } else {
-        showError(error.response?.data?.error || 'שגיאה ביצירת הפוסט - בדוק את החיבור לשרת');
+        showError(error.response?.data?.error || 'שגיאה בחיבור לשרת');
       }
     } finally {
       setCreatingPostId(null);
