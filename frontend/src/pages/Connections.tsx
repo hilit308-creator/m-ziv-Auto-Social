@@ -148,13 +148,46 @@ export default function Connections() {
 
       {/* Setup Instructions */}
       <div className="mt-8 card bg-blue-50 border border-blue-200">
-        <h3 className="font-semibold text-blue-800 mb-2">איך לחבר רשת חברתית?</h3>
-        <ol className="list-decimal list-inside text-blue-700 space-y-2 text-sm">
-          <li>צור אפליקציה בפורטל המפתחים של הרשת (Meta, TikTok, Google)</li>
+        <h3 className="font-semibold text-blue-800 mb-3">🔗 איך לחבר רשת חברתית?</h3>
+        <ol className="list-decimal list-inside text-blue-700 space-y-2 text-sm mb-4">
+          <li>צור אפליקציה בפורטל המפתחים של הרשת</li>
           <li>הגדר את ה-Redirect URI לכתובת ה-API שלך</li>
           <li>הוסף את המשתנים הנדרשים ל-Railway</li>
           <li>לחץ על "התחבר" והרשה גישה</li>
         </ol>
+
+        <div className="border-t border-blue-200 pt-4 mt-4">
+          <h4 className="font-semibold text-blue-800 mb-2">🔑 קישורים לפורטלי מפתחים:</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+            <a href="https://developers.facebook.com" target="_blank" rel="noopener noreferrer" 
+               className="flex items-center gap-2 text-blue-600 hover:underline">
+              <Facebook size={16} /> Meta (פייסבוק/אינסטגרם)
+            </a>
+            <a href="https://www.linkedin.com/developers/" target="_blank" rel="noopener noreferrer"
+               className="flex items-center gap-2 text-blue-600 hover:underline">
+              <Linkedin size={16} /> LinkedIn
+            </a>
+            <a href="https://console.cloud.google.com" target="_blank" rel="noopener noreferrer"
+               className="flex items-center gap-2 text-blue-600 hover:underline">
+              <Youtube size={16} /> Google (YouTube)
+            </a>
+            <a href="https://developers.tiktok.com" target="_blank" rel="noopener noreferrer"
+               className="flex items-center gap-2 text-blue-600 hover:underline">
+              <span>🎵</span> TikTok
+            </a>
+          </div>
+        </div>
+
+        <div className="border-t border-blue-200 pt-4 mt-4">
+          <h4 className="font-semibold text-blue-800 mb-2">⚙️ הגדרות Railway:</h4>
+          <p className="text-sm text-blue-700 mb-2">
+            היכנס ל-Railway והוסף את המשתנים הבאים:
+          </p>
+          <a href="https://railway.app" target="_blank" rel="noopener noreferrer"
+             className="btn-primary inline-flex items-center gap-2">
+            פתח Railway
+          </a>
+        </div>
       </div>
     </div>
   );
