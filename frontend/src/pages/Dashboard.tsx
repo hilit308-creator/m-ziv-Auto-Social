@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { FileText, Calendar, TrendingUp, CheckCircle, Clock, AlertCircle } from 'lucide-react';
-import { analyticsApi, calendarApi, ideasApi } from '../services/api';
+import { analyticsApi, calendarApi, ideasApi, postsApi } from '../services/api';
 
 interface Stats {
   total_posts: number;
@@ -18,10 +19,28 @@ interface Idea {
 }
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   const [stats, setStats] = useState<Stats | null>(null);
   const [todayIdea, setTodayIdea] = useState<Idea | null>(null);
   const [upcomingPosts, setUpcomingPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [creatingPost, setCreatingPost] = useState(false);
+
+  const createPostFromIdea = async () => {
+    if (!todayIdea) return;
+    setCreatingPost(true);
+    try {
+      await postsApi.create({ topic: todayIdea.topic });
+      await ideasApi.markUsed(todayIdea.id);
+      alert('הפוסט נוצר בהצלחה!');
+      navigate('/posts');
+    } catch (error) {
+      console.error('Error creating post:', error);
+      alert('שגיאה ביצירת הפוסט');
+    } finally {
+      setCreatingPost(false);
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -105,8 +124,12 @@ export default function Dashboard() {
               <span className="inline-block bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-sm">
                 {todayIdea.category}
               </span>
-              <button className="btn-primary mt-4 block">
-                צור פוסט מהרעיון
+              <button 
+                onClick={createPostFromIdea}
+                disabled={creatingPost}
+                className="btn-primary mt-4 block"
+              >
+                {creatingPost ? 'יוצר...' : 'צור פוסט מהרעיון'}
               </button>
             </div>
           ) : (
