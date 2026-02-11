@@ -80,7 +80,7 @@ export default function Analytics() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary"></div>
       </div>
     );
   }
@@ -159,7 +159,7 @@ export default function Analytics() {
               <XAxis dataKey="day" />
               <YAxis />
               <Tooltip />
-              <Bar dataKey="count" fill="#7c3aed" radius={[4, 4, 0, 0]} name="פוסטים" />
+              <Bar dataKey="count" fill="#F28C28" radius={[4, 4, 0, 0]} name="פוסטים" />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -180,7 +180,7 @@ export default function Analytics() {
             <XAxis dataKey="day" />
             <YAxis />
             <Tooltip />
-            <Line type="monotone" dataKey="count" stroke="#ec4899" strokeWidth={2} dot={{ fill: '#ec4899' }} name="פוסטים" />
+            <Line type="monotone" dataKey="count" stroke="#F28C28" strokeWidth={2} dot={{ fill: '#F28C28' }} name="פוסטים" />
           </LineChart>
         </ResponsiveContainer>
       </div>
@@ -189,14 +189,14 @@ export default function Analytics() {
       {weeklyReport?.recommendations && (
         <div className="card">
           <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <TrendingUp className="text-blue-600" />
+            <TrendingUp className="text-brand-primary" />
             המלצות לשיפור
           </h2>
           
           <ul className="space-y-3">
             {weeklyReport.recommendations.map((rec: string, index: number) => (
-              <li key={index} className="flex items-start gap-3 p-3 bg-blue-50 rounded-lg">
-                <span className="text-blue-600 font-bold">{index + 1}</span>
+              <li key={index} className="flex items-start gap-3 p-3 bg-brand-light rounded-lg">
+                <span className="text-brand-primary font-bold">{index + 1}</span>
                 <span className="text-gray-700">{rec}</span>
               </li>
             ))}

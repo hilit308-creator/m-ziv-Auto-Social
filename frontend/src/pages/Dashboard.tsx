@@ -73,7 +73,7 @@ export default function Dashboard() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary"></div>
       </div>
     );
   }
@@ -114,14 +114,14 @@ export default function Dashboard() {
         {/* Today's Idea */}
         <div className="card">
           <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <TrendingUp className="text-blue-600" />
+            <TrendingUp className="text-brand-primary" />
             רעיון להיום
           </h2>
           {todayIdea ? (
             <div>
               <h3 className="text-lg font-medium text-gray-700 mb-2">{todayIdea.topic}</h3>
               <p className="text-gray-600 mb-3">{todayIdea.description}</p>
-              <span className="inline-block bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-sm">
+              <span className="inline-block bg-brand-light text-brand-primary px-3 py-1 rounded-full text-sm">
                 {todayIdea.category}
               </span>
               <button 
@@ -140,7 +140,7 @@ export default function Dashboard() {
         {/* Upcoming Posts */}
         <div className="card">
           <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <Calendar className="text-blue-600" />
+            <Calendar className="text-brand-primary" />
             פוסטים קרובים
           </h2>
           {upcomingPosts.length > 0 ? (
@@ -153,7 +153,7 @@ export default function Dashboard() {
                       {new Date(post.scheduled_at).toLocaleDateString('he-IL')}
                     </p>
                   </div>
-                  <span className="text-blue-600">
+                  <span className="text-brand-primary">
                     <Clock size={20} />
                   </span>
                 </li>
@@ -188,7 +188,7 @@ function StatCard({ title, value, icon: Icon, color }: {
   color: string;
 }) {
   const colorClasses: Record<string, string> = {
-    blue: 'bg-blue-50 text-blue-600',
+    blue: 'bg-brand-light text-brand-primary',
     green: 'bg-green-50 text-green-600',
     yellow: 'bg-yellow-50 text-yellow-600',
     gray: 'bg-gray-50 text-gray-600',

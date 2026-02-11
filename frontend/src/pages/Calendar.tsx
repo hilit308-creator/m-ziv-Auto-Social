@@ -62,7 +62,7 @@ export default function Calendar() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary"></div>
       </div>
     );
   }
@@ -96,11 +96,11 @@ export default function Calendar() {
         {days.map((day) => (
           <div 
             key={day.date}
-            className={`card min-h-[200px] ${isToday(day.date) ? 'ring-2 ring-blue-500' : ''}`}
+            className={`card min-h-[200px] ${isToday(day.date) ? 'ring-2 ring-brand-primary' : ''}`}
           >
             <div className="text-center mb-4 pb-3 border-b">
               <p className="text-sm text-gray-500">{getDayName(day.date)}</p>
-              <p className={`text-lg font-bold ${isToday(day.date) ? 'text-blue-600' : 'text-gray-800'}`}>
+              <p className={`text-lg font-bold ${isToday(day.date) ? 'text-brand-primary' : 'text-gray-800'}`}>
                 {formatDate(day.date)}
               </p>
             </div>
@@ -112,7 +112,7 @@ export default function Calendar() {
                 day.posts.map((post) => (
                   <div 
                     key={post.id}
-                    className="p-2 bg-blue-50 rounded-lg text-sm"
+                    className="p-2 bg-brand-light rounded-lg text-sm"
                   >
                     <p className="font-medium text-gray-700 truncate">{post.topic}</p>
                     <div className="flex items-center gap-1 text-xs text-gray-500 mt-1">

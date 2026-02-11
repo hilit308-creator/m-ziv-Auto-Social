@@ -31,30 +31,33 @@ export default function Layout({ children }: LayoutProps) {
   const location = useLocation();
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-mziv-section flex">
       {/* Sidebar */}
-      <aside className="w-64 bg-white shadow-lg fixed h-full">
-        <div className="p-6 border-b bg-gradient-to-r from-purple-600 to-pink-500">
-          <h1 className="text-2xl font-bold text-white">M-Ziv Social</h1>
-          <p className="text-sm text-purple-100">אוטומציה לרשתות חברתיות</p>
+      <aside className="w-64 bg-white fixed h-full border-l border-mziv-border">
+        <div className="p-6 border-b border-mziv-border">
+          <h1 className="text-2xl font-bold text-mziv-text">M-Ziv</h1>
+          <p className="text-sm text-mziv-text-secondary">AI Social Dashboard</p>
         </div>
         
         <nav className="p-4">
-          <ul className="space-y-2">
+          <ul className="space-y-1">
             {navigation.map((item) => {
               const isActive = location.pathname === item.href;
               return (
                 <li key={item.name}>
                   <Link
                     to={item.href}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                    className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors relative ${
                       isActive 
-                        ? 'bg-purple-50 text-purple-600' 
-                        : 'text-gray-600 hover:bg-gray-100'
+                        ? 'bg-brand-light text-brand-primary' 
+                        : 'text-mziv-text-secondary hover:bg-mziv-section'
                     }`}
                   >
-                    <item.icon size={20} />
-                    <span>{item.name}</span>
+                    {isActive && (
+                      <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-brand-primary rounded-l"></div>
+                    )}
+                    <item.icon size={20} className={isActive ? 'text-brand-primary' : ''} />
+                    <span className="font-medium">{item.name}</span>
                   </Link>
                 </li>
               );
@@ -64,7 +67,7 @@ export default function Layout({ children }: LayoutProps) {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 mr-64 p-8">
+      <main className="flex-1 mr-64 p-8 bg-mziv-section">
         {children}
       </main>
     </div>

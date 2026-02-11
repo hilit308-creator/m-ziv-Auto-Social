@@ -62,7 +62,7 @@ export default function Ideas() {
   const getCategoryBadge = (category: string) => {
     const colors: Record<string, string> = {
       tip: 'bg-green-100 text-green-700',
-      story: 'bg-purple-100 text-purple-700',
+      story: 'bg-brand-light text-brand-primary',
       question: 'bg-blue-100 text-blue-700',
       promotion: 'bg-yellow-100 text-yellow-700',
       educational: 'bg-indigo-100 text-indigo-700',
@@ -84,7 +84,7 @@ export default function Ideas() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary"></div>
       </div>
     );
   }
@@ -114,10 +114,10 @@ export default function Ideas() {
 
       {/* Today's Idea */}
       {todayIdea && (
-        <div className="card bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 mb-8">
+        <div className="card bg-gradient-to-r from-orange-50 to-orange-100 border border-orange-200 mb-8">
           <div className="flex items-start gap-4">
             <div className="p-3 bg-white rounded-lg shadow-sm">
-              <Lightbulb className="text-yellow-500" size={32} />
+              <Lightbulb className="text-brand-primary" size={32} />
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-2">

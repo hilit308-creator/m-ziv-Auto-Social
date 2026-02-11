@@ -150,7 +150,7 @@ export default function VideoPage() {
 
               <div className="flex gap-2">
                 <span className={`px-3 py-1 rounded-full text-sm ${
-                  result.status === 'completed' ? 'bg-green-100 text-green-700' :
+                  result.status === 'completed' ? 'bg-brand-light text-brand-primary' :
                   result.status === 'failed' ? 'bg-red-100 text-red-700' :
                   'bg-yellow-100 text-yellow-700'
                 }`}>
@@ -193,10 +193,10 @@ export default function VideoPage() {
             <button
               key={template.name}
               onClick={() => setPrompt(template.prompt)}
-              className="p-4 bg-purple-50 hover:bg-purple-100 rounded-lg text-right transition-colors"
+              className="bg-brand-light text-brand-primary hover:bg-brand-lighter rounded-lg text-right transition-colors"
             >
-              <p className="font-medium text-purple-700">{template.name}</p>
-              <p className="text-sm text-purple-600 mt-1 line-clamp-2">{template.prompt}</p>
+              <p className="font-medium text-brand-primary">{template.name}</p>
+              <p className="text-sm text-brand-primary mt-1 line-clamp-2">{template.prompt}</p>
             </button>
           ))}
         </div>

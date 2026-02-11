@@ -15,27 +15,48 @@ body {
 
 @layer components {
   .btn-primary {
-    @apply bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-4 rounded-lg transition-colors;
+    @apply text-white font-medium py-2 px-4 rounded-btn transition-all;
+    background-color: #F28C28;
+    box-shadow: 0 2px 4px rgba(242, 140, 40, 0.2);
+  }
+  
+  .btn-primary:hover {
+    background-color: #E67E22;
+  }
+  
+  .btn-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
   
   .btn-secondary {
-    @apply bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-lg transition-colors;
+    @apply font-medium py-2 px-4 rounded-btn transition-colors bg-white;
+    border: 1px solid #F28C28;
+    color: #F28C28;
   }
   
-  .btn-gradient {
-    @apply text-white font-medium py-2 px-4 rounded-lg transition-all;
-    background: linear-gradient(135deg, #7c3aed 0%, #ec4899 100%);
-  }
-  
-  .btn-gradient:hover {
-    background: linear-gradient(135deg, #6d28d9 0%, #db2777 100%);
+  .btn-secondary:hover {
+    background-color: rgba(242, 140, 40, 0.1);
   }
   
   .card {
-    @apply bg-white rounded-xl shadow-md p-6;
+    @apply bg-white p-6;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   }
   
   .input {
-    @apply w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none;
+    @apply w-full px-4 py-2 rounded-lg outline-none transition-all;
+    border: 1px solid #EAEAEA;
+    color: #222222;
+  }
+  
+  .input:focus {
+    border-color: #F28C28;
+    box-shadow: 0 0 0 3px rgba(242, 140, 40, 0.1);
+  }
+  
+  .input::placeholder {
+    color: #666666;
   }
 }

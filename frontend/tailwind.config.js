@@ -20,10 +20,17 @@ export default {
           900: '#581c87',
         },
         brand: {
-          purple: '#7c3aed',
-          pink: '#ec4899',
-          blue: '#3b82f6',
-          gradient: 'linear-gradient(135deg, #7c3aed 0%, #ec4899 100%)',
+          primary: '#F28C28',
+          secondary: '#E67E22',
+          light: 'rgba(242,140,40,0.1)',
+          lighter: 'rgba(242,140,40,0.15)',
+        },
+        mziv: {
+          bg: '#FFFFFF',
+          section: '#F9F9F9',
+          text: '#222222',
+          'text-secondary': '#666666',
+          border: '#EAEAEA',
         },
         social: {
           instagram: '#E4405F',
@@ -33,6 +40,14 @@ export default {
           tiktok: '#000000',
           youtube: '#FF0000',
         },
+      },
+      borderRadius: {
+        'btn': '10px',
+        'card': '12px',
+      },
+      boxShadow: {
+        'card': '0 2px 8px rgba(0, 0, 0, 0.06)',
+        'btn': '0 2px 4px rgba(242, 140, 40, 0.2)',
       },
     },
   },

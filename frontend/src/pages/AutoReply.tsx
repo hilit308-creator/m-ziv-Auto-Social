@@ -65,7 +65,7 @@ export default function AutoReply() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary"></div>
       </div>
     );
   }
@@ -79,7 +79,7 @@ export default function AutoReply() {
         {/* Configuration */}
         <div className="card">
           <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <Settings className="text-blue-600" />
+            <Settings className="text-brand-primary" />
             הגדרות
           </h2>
 
@@ -163,7 +163,7 @@ export default function AutoReply() {
         {/* Test Reply */}
         <div className="card">
           <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <MessageSquare className="text-blue-600" />
+            <MessageSquare className="text-brand-primary" />
             בדיקת תשובה
           </h2>
 

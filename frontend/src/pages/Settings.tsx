@@ -70,7 +70,7 @@ export default function Settings() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary"></div>
       </div>
     );
   }
@@ -102,7 +102,7 @@ export default function Settings() {
         {/* Business Info */}
         <div className="card">
           <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <User className="text-blue-600" />
+            <User className="text-brand-primary" />
             פרטי העסק
           </h2>
 
@@ -152,7 +152,7 @@ export default function Settings() {
         {/* Tone & Style */}
         <div className="card">
           <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <Palette className="text-blue-600" />
+            <Palette className="text-brand-primary" />
             טון וסגנון
           </h2>
 
@@ -204,7 +204,7 @@ export default function Settings() {
         {/* Hashtags */}
         <div className="card lg:col-span-2">
           <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <Hash className="text-blue-600" />
+            <Hash className="text-brand-primary" />
             האשטגים של המותג
           </h2>
 
