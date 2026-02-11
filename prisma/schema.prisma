@@ -97,6 +97,236 @@ model ContentIdea {
   createdAt   DateTime @default(now())
 }
 
+// ============================================
+// AI Personal Assistant Layer Models
+// ============================================
+
+// UserProfile - פרופיל משתמש אישי
+model UserProfile {
+  id                  String   @id @default(cuid())
+  email               String?  @unique
+  name                String?
+  
+  // Mom Mode Preference
+  uiMode              String   @default("mom") // mom, advanced
+  
+  // Privacy Consent
+  voiceDataConsent    Boolean  @default(false)
+  dataRetentionDays   Int      @default(365)
+  
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  
+  // Relations
+  energyProfile       EnergyProfile?
+  styleProfile        StyleProfile?
+  ideas               Idea[]
+  voiceSamples        VoiceSample[]
+  activityLogs        ActivityLog[]
+  feedbacks           Feedback[]
+}
+
+// EnergyProfile - פרופיל אנרגיה להתאמת זמני עבודה
+model EnergyProfile {
+  id                  String   @id @default(cuid())
+  userId              String   @unique
+  user                UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Active days (JSON array of day numbers: 0=Sunday, 6=Saturday)
+  activeDays          String   @default("[0,1,2,3,4]") // JSON array
+  
+  // Effective hours for content creation (24h format)
+  preferredStartHour  Int      @default(9)
+  preferredEndHour    Int      @default(17)
+  
+  // Peak creativity times
+  peakCreativityHours String   @default("[10,11,15,16]") // JSON array
+  
+  // Batch preferences
+  preferBatchCreation Boolean  @default(true)
+  batchSize           Int      @default(3)
+  
+  // Audience activity times (learned from analytics)
+  audienceActiveHours String   @default("[8,12,18,20]") // JSON array
+  
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+// StyleProfile - פרופיל סגנון כתיבה אישי
+model StyleProfile {
+  id                  String   @id @default(cuid())
+  userId              String   @unique
+  user                UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Writing style characteristics (learned)
+  tonePreference      String   @default("warm_professional") // warm_professional, casual, formal
+  emojiUsage          String   @default("low") // none, low, medium, high
+  averageSentenceLen  Int      @default(15)
+  
+  // Common phrases and expressions (JSON array)
+  signaturePhrases    String   @default("[]")
+  
+  // Words to avoid (JSON array)
+  avoidWords          String   @default("[]")
+  
+  // Preferred CTAs (JSON array)
+  preferredCTAs       String   @default("[]")
+  
+  // Platform preferences (JSON object with platform stats)
+  platformPreferences String   @default("{}")
+  
+  // Learning data
+  totalPostsAnalyzed  Int      @default(0)
+  totalEditsTracked   Int      @default(0)
+  lastTrainedAt       DateTime?
+  
+  // Voice cloning model status
+  voiceModelStatus    String   @default("untrained") // untrained, training, ready
+  voiceModelData      String?  // Serialized model parameters
+  
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+// Idea - רעיונות שנשמרו
+model Idea {
+  id                  String   @id @default(cuid())
+  userId              String
+  user                UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Input type
+  inputType           String   // text, voice, image
+  
+  // Content
+  rawContent          String   // Original text, transcript, or image URL
+  processedContent    String?  // AI-processed and enhanced version
+  
+  // AI Suggestions
+  suggestedPostType   String?  // reel, story, post, carousel
+  suggestedHook       String?
+  suggestedPlatforms  String?  // JSON array
+  suggestedPublishTime String? // ISO time string
+  
+  // Status
+  status              String   @default("captured") // captured, processing, ready, converted
+  convertedToPostId   String?  // Link to Post if converted
+  
+  // Tags for organization
+  tags                String?  // JSON array
+  
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+// VoiceSample - דוגמאות קול לאימון
+model VoiceSample {
+  id                  String   @id @default(cuid())
+  userId              String
+  user                UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Audio data
+  audioUrl            String?
+  transcript          String
+  duration            Int?     // Duration in seconds
+  
+  // Processing status
+  status              String   @default("pending") // pending, processed, failed
+  
+  // Analysis results
+  styleAnalysis       String?  // JSON with style characteristics
+  
+  createdAt           DateTime @default(now())
+}
+
+// ActivityLog - לוג פעילות לזיהוי שחיקה ודפוסים
+model ActivityLog {
+  id                  String   @id @default(cuid())
+  userId              String
+  user                UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Activity type
+  activityType        String   // post_created, post_published, idea_captured, session_start, session_end
+  
+  // Metadata
+  metadata            String?  // JSON with additional data
+  
+  // Burnout indicators
+  sessionDuration     Int?     // Duration in minutes
+  postsInSession      Int?
+  
+  createdAt           DateTime @default(now())
+}
+
+// Feedback - משוב על תוכן שנוצר
+model Feedback {
+  id                  String   @id @default(cuid())
+  userId              String
+  user                UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Related content
+  postId              String?
+  contentType         String   // caption, hashtags, title, hook
+  
+  // Original and edited content
+  originalContent     String
+  editedContent       String?
+  
+  // Feedback type
+  feedbackType        String   // edit, approve, reject
+  
+  // AI learning metadata
+  changeCategories    String?  // JSON array: ["shorter", "more_warm", "less_emoji"]
+  
+  createdAt           DateTime @default(now())
+}
+
+// RecyclingSuggestion - הצעות למיחזור תוכן
+model RecyclingSuggestion {
+  id                  String   @id @default(cuid())
+  
+  // Original post
+  originalPostId      String
+  
+  // Suggestion details
+  suggestionType      String   // refresh, adapt_platform, expand, shorten
+  targetPlatform      String?
+  suggestedChanges    String   // JSON with change details
+  
+  // Performance data that triggered suggestion
+  performanceScore    Float?
+  lastPublishedAt     DateTime?
+  
+  // Status
+  status              String   @default("pending") // pending, accepted, rejected, executed
+  
+  createdAt           DateTime @default(now())
+}
+
+// DailyIdea - רעיונות יומיים שנוצרו אוטומטית
+model DailyIdea {
+  id                  String   @id @default(cuid())
+  
+  // Idea content
+  filmingIdea         String
+  contentType         String   // reel, story, post
+  suggestedHook       String
+  
+  // Context
+  occasion            String?  // holiday, trend, evergreen
+  difficulty          String   @default("easy") // easy, medium, hard
+  estimatedTime       Int      @default(15) // minutes
+  
+  // Targeting
+  targetDate          DateTime
+  
+  // Status
+  used                Boolean  @default(false)
+  usedAt              DateTime?
+  
+  createdAt           DateTime @default(now())
+}
+
 // User - משתמש במערכת
 model User {
   id            String   @id @default(cuid())

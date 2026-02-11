@@ -34,9 +34,12 @@ export default function Layout({ children }: LayoutProps) {
     <div className="min-h-screen bg-mziv-section flex">
       {/* Sidebar */}
       <aside className="w-64 bg-white fixed h-full border-l border-mziv-border">
-        <div className="p-6 border-b border-mziv-border">
-          <h1 className="text-2xl font-bold text-mziv-text">M-Ziv</h1>
-          <p className="text-sm text-mziv-text-secondary">AI Social Dashboard</p>
+        <div className="p-4 border-b border-mziv-border">
+          <img 
+            src="/logo.png" 
+            alt="מרכז זיו" 
+            className="h-12 w-auto"
+          />
         </div>
         
         <nav className="p-4">
