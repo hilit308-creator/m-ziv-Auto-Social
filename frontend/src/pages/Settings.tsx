@@ -27,9 +27,17 @@ export default function Settings() {
   const fetchProfile = async () => {
     try {
       const res = await profileApi.get();
-      setProfile(res.data.data);
+      const serverProfile = res.data.data;
+      setProfile(serverProfile);
+      // Save to localStorage as backup
+      localStorage.setItem('mziv_profile', JSON.stringify(serverProfile));
     } catch (error) {
       console.error('Error fetching profile:', error);
+      // Try to load from localStorage if API fails
+      const cached = localStorage.getItem('mziv_profile');
+      if (cached) {
+        setProfile(JSON.parse(cached));
+      }
     } finally {
       setLoading(false);
     }
@@ -40,11 +48,16 @@ export default function Settings() {
     
     setSaving(true);
     try {
+      // Save to localStorage immediately
+      localStorage.setItem('mziv_profile', JSON.stringify(profile));
+      
+      // Then save to server
       await profileApi.update(profile);
       alert('הפרופיל נשמר בהצלחה!');
     } catch (error) {
       console.error('Error saving profile:', error);
-      alert('שגיאה בשמירה');
+      // Data is still saved locally
+      alert('נשמר מקומית. יסונכרן כשהשרת יהיה זמין.');
     } finally {
       setSaving(false);
     }

@@ -117,4 +117,52 @@ export const spamApi = {
   getKeywords: () => api.get('/api/spam/keywords'),
 };
 
+// AI Personal Assistant
+export const assistantApi = {
+  // Energy Mode
+  getEnergyProfile: () => api.get('/api/assistant/energy-profile'),
+  updateEnergyProfile: (data: any) => api.patch('/api/assistant/energy-profile', data),
+  getBatchSuggestion: () => api.post('/api/assistant/batch-suggest'),
+  
+  // Voice First
+  createVoicePost: (data: { transcript: string; audioUrl?: string; platforms?: string[] }) => 
+    api.post('/api/assistant/voice-post', data),
+  
+  // Ideas
+  captureIdea: (data: { inputType: string; content: string; tags?: string[] }) => 
+    api.post('/api/assistant/ideas/capture', data),
+  getIdeas: (status?: string) => api.get('/api/assistant/ideas', { params: { status } }),
+  convertIdeaToPost: (ideaId: string, platforms?: string[]) => 
+    api.post('/api/assistant/ideas/convert-to-post', { ideaId, platforms }),
+  
+  // Recycling
+  getRecyclingSuggestions: () => api.get('/api/assistant/recycling-suggestions'),
+  recyclePost: (postId: string, suggestionType: string, targetPlatform?: string) => 
+    api.post('/api/assistant/recycle-post', { postId, suggestionType, targetPlatform }),
+  
+  // Learning Engine
+  getStyleProfile: () => api.get('/api/assistant/style-profile'),
+  updateStyleProfile: (data: any) => api.patch('/api/assistant/style-profile', data),
+  submitFeedback: (data: any) => api.post('/api/assistant/feedback', data),
+  trainVoiceModel: () => api.post('/api/assistant/train-voice'),
+  
+  // Burnout Protection
+  getBurnoutStatus: () => api.get('/api/assistant/burnout-status'),
+  
+  // Daily Idea
+  getDailyIdea: () => api.get('/api/assistant/daily-idea'),
+  
+  // Reply Suggestions
+  suggestReply: (comment: string, platform: string, context?: string) => 
+    api.post('/api/assistant/reply-suggest', { comment, platform, context }),
+  
+  // Mom Mode
+  getMomModeData: () => api.get('/api/assistant/mom-mode'),
+  
+  // Privacy
+  deleteUserData: () => api.delete('/api/assistant/user-data'),
+  updatePrivacyConsent: (data: { voiceDataConsent?: boolean; dataRetentionDays?: number }) => 
+    api.patch('/api/assistant/privacy-consent', data),
+};
+
 export default api;

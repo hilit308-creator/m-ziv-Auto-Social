@@ -42,6 +42,17 @@ export default function Layout({ children }: LayoutProps) {
           />
         </div>
         
+        {/* Mom Mode Quick Access */}
+        <div className="p-4 border-b border-mziv-border">
+          <Link
+            to="/mom"
+            className="flex items-center gap-3 px-4 py-3 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:opacity-90 transition-opacity"
+          >
+            <span className="text-xl">✨</span>
+            <span className="font-medium">מצב פשוט</span>
+          </Link>
+        </div>
+        
         <nav className="p-4">
           <ul className="space-y-1">
             {navigation.map((item) => {

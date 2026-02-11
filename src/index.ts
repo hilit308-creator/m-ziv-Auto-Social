@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import { aiService } from './services/ai.service';
 import { publishingService } from './services/publishing.service';
 import mzivRoutes from './routes/mziv.routes';
+import assistantRoutes from './routes/assistant.routes';
 import postsRoutes from './routes/posts.routes';
 import profileRoutes from './routes/profile.routes';
 import ideasRoutes from './routes/ideas.routes';
@@ -99,6 +100,9 @@ app.use('/api/audit', auditRoutes);
 // Spam filter routes
 app.use('/api/spam', spamRoutes);
 
+// AI Personal Assistant routes
+app.use('/api/assistant', assistantRoutes);
+
 app.get('/', (_req: Request, res: Response) => {
   res.json({
     name: 'M-Ziv Auto Social API',
@@ -160,6 +164,45 @@ app.get('/', (_req: Request, res: Response) => {
       },
       shortcuts: {
         execute: 'POST /api/shortcuts/execute',
+      },
+      assistant: {
+        energyProfile: {
+          get: 'GET /api/assistant/energy-profile',
+          update: 'PATCH /api/assistant/energy-profile',
+          batchSuggest: 'POST /api/assistant/batch-suggest',
+        },
+        voiceFirst: {
+          createPost: 'POST /api/assistant/voice-post',
+        },
+        ideas: {
+          capture: 'POST /api/assistant/ideas/capture',
+          list: 'GET /api/assistant/ideas',
+          convertToPost: 'POST /api/assistant/ideas/convert-to-post',
+        },
+        recycling: {
+          suggestions: 'GET /api/assistant/recycling-suggestions',
+          recycle: 'POST /api/assistant/recycle-post',
+        },
+        learning: {
+          styleProfile: 'GET /api/assistant/style-profile',
+          updateStyle: 'PATCH /api/assistant/style-profile',
+          feedback: 'POST /api/assistant/feedback',
+          trainVoice: 'POST /api/assistant/train-voice',
+        },
+        wellbeing: {
+          burnoutStatus: 'GET /api/assistant/burnout-status',
+          dailyIdea: 'GET /api/assistant/daily-idea',
+        },
+        replies: {
+          suggest: 'POST /api/assistant/reply-suggest',
+        },
+        momMode: {
+          getData: 'GET /api/assistant/mom-mode',
+        },
+        privacy: {
+          deleteData: 'DELETE /api/assistant/user-data',
+          updateConsent: 'PATCH /api/assistant/privacy-consent',
+        },
       },
     },
     documentation: 'See MZIV_API_DOCS.md for M-Ziv documentation',
