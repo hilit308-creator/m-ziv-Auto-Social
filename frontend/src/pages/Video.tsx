@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Video, Play, Download, RefreshCw, Sparkles } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Video, Play, Download, RefreshCw, Sparkles, Upload, Smartphone } from 'lucide-react';
 import { videoApi } from '../services/api';
 
 interface VideoResult {
@@ -15,6 +15,19 @@ export default function VideoPage() {
   const [aspectRatio, setAspectRatio] = useState<'16:9' | '9:16' | '1:1'>('9:16');
   const [generating, setGenerating] = useState(false);
   const [result, setResult] = useState<VideoResult | null>(null);
+  const [uploadedVideo, setUploadedVideo] = useState<string | null>(null);
+  const [uploadedFileName, setUploadedFileName] = useState<string>('');
+  const [mode, setMode] = useState<'generate' | 'upload'>('generate');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const url = URL.createObjectURL(file);
+      setUploadedVideo(url);
+      setUploadedFileName(file.name);
+    }
+  };
 
   const generateVideo = async () => {
     if (!prompt.trim()) return;
@@ -47,77 +60,161 @@ export default function VideoPage() {
       <h1 className="text-3xl font-bold text-gray-800 mb-2">יצירת וידאו</h1>
       <p className="text-gray-500 mb-8">צור וידאו קצר עם AI לסטוריז, Reels ו-TikTok</p>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Generator Form */}
-        <div className="card">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <Sparkles className="text-purple-600" />
-            הגדרות וידאו
-          </h2>
-
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                תיאור הוידאו
-              </label>
-              <textarea
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                placeholder="תאר את הוידאו שאתה רוצה ליצור... לדוגמה: סרטון קצר שמציג מוצר חדש עם אפקטים מודרניים"
-                className="input min-h-[120px]"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  אורך (שניות)
-                </label>
-                <select
-                  value={duration}
-                  onChange={(e) => setDuration(Number(e.target.value))}
-                  className="input"
-                >
-                  <option value={5}>5 שניות</option>
-                  <option value={10}>10 שניות</option>
-                  <option value={15}>15 שניות</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  יחס תצוגה
-                </label>
-                <select
-                  value={aspectRatio}
-                  onChange={(e) => setAspectRatio(e.target.value as any)}
-                  className="input"
-                >
-                  <option value="9:16">9:16 (סטורי/Reels)</option>
-                  <option value="16:9">16:9 (YouTube)</option>
-                  <option value="1:1">1:1 (פוסט)</option>
-                </select>
-              </div>
-            </div>
-
-            <button
-              onClick={generateVideo}
-              disabled={generating || !prompt.trim()}
-              className="btn-primary w-full flex items-center justify-center gap-2"
-            >
-              {generating ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  מייצר וידאו...
-                </>
-              ) : (
-                <>
-                  <Video size={18} />
-                  צור וידאו
-                </>
-              )}
-            </button>
+      {/* Mode Selection */}
+      <div className="flex gap-4 mb-8">
+        <button
+          onClick={() => setMode('generate')}
+          className={`flex-1 p-4 rounded-xl border-2 transition-all flex items-center justify-center gap-3 ${
+            mode === 'generate' ? 'border-brand-primary bg-brand-light' : 'border-gray-200 hover:border-gray-300'
+          }`}
+        >
+          <Sparkles size={24} className={mode === 'generate' ? 'text-brand-primary' : 'text-gray-400'} />
+          <div className="text-right">
+            <p className={`font-medium ${mode === 'generate' ? 'text-brand-primary' : 'text-gray-600'}`}>צור וידאו עם AI</p>
+            <p className="text-sm text-gray-500">תאר והמערכת תייצר</p>
           </div>
+        </button>
+        <button
+          onClick={() => setMode('upload')}
+          className={`flex-1 p-4 rounded-xl border-2 transition-all flex items-center justify-center gap-3 ${
+            mode === 'upload' ? 'border-brand-primary bg-brand-light' : 'border-gray-200 hover:border-gray-300'
+          }`}
+        >
+          <Smartphone size={24} className={mode === 'upload' ? 'text-brand-primary' : 'text-gray-400'} />
+          <div className="text-right">
+            <p className={`font-medium ${mode === 'upload' ? 'text-brand-primary' : 'text-gray-600'}`}>העלה סרטון</p>
+            <p className="text-sm text-gray-500">מהטלפון או המחשב</p>
+          </div>
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Generator Form / Upload Form */}
+        <div className="card">
+          {mode === 'generate' ? (
+            <>
+              <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                <Sparkles className="text-brand-primary" />
+                הגדרות וידאו
+              </h2>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    תיאור הוידאו
+                  </label>
+                  <textarea
+                    value={prompt}
+                    onChange={(e) => setPrompt(e.target.value)}
+                    placeholder="תאר את הוידאו שאתה רוצה ליצור... לדוגמה: סרטון קצר שמציג מוצר חדש עם אפקטים מודרניים"
+                    className="input min-h-[120px]"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      אורך (שניות)
+                    </label>
+                    <select
+                      value={duration}
+                      onChange={(e) => setDuration(Number(e.target.value))}
+                      className="input"
+                    >
+                      <option value={5}>5 שניות</option>
+                      <option value={10}>10 שניות</option>
+                      <option value={15}>15 שניות</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      יחס תצוגה
+                    </label>
+                    <select
+                      value={aspectRatio}
+                      onChange={(e) => setAspectRatio(e.target.value as any)}
+                      className="input"
+                    >
+                      <option value="9:16">9:16 (סטורי/Reels)</option>
+                      <option value="16:9">16:9 (YouTube)</option>
+                      <option value="1:1">1:1 (פוסט)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <button
+                  onClick={generateVideo}
+                  disabled={generating || !prompt.trim()}
+                  className="btn-primary w-full flex items-center justify-center gap-2"
+                >
+                  {generating ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      מייצר וידאו...
+                    </>
+                  ) : (
+                    <>
+                      <Video size={18} />
+                      צור וידאו
+                    </>
+                  )}
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                <Upload className="text-brand-primary" />
+                העלאת סרטון
+              </h2>
+
+              <div className="space-y-4">
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileUpload}
+                  accept="video/*"
+                  className="hidden"
+                />
+                
+                <div 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:border-brand-primary hover:bg-brand-light transition-all"
+                >
+                  {uploadedVideo ? (
+                    <div>
+                      <Video size={48} className="mx-auto mb-3 text-brand-primary" />
+                      <p className="font-medium text-gray-700">{uploadedFileName}</p>
+                      <p className="text-sm text-gray-500 mt-1">לחץ להחלפה</p>
+                    </div>
+                  ) : (
+                    <div>
+                      <Smartphone size={48} className="mx-auto mb-3 text-gray-400" />
+                      <p className="font-medium text-gray-700">לחץ להעלאת סרטון</p>
+                      <p className="text-sm text-gray-500 mt-1">MP4, MOV, AVI עד 100MB</p>
+                    </div>
+                  )}
+                </div>
+
+                {uploadedVideo && (
+                  <video 
+                    src={uploadedVideo} 
+                    controls 
+                    className="w-full rounded-lg"
+                  />
+                )}
+
+                <button
+                  disabled={!uploadedVideo}
+                  className="btn-primary w-full flex items-center justify-center gap-2"
+                >
+                  <Upload size={18} />
+                  שמור והמשך
+                </button>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Result Preview */}

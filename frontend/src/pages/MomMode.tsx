@@ -1,6 +1,85 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { assistantApi } from '../services/api';
+
+// Custom hook for audio recording
+function useAudioRecorder() {
+  const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+
+  const startRecording = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      mediaRecorderRef.current = mediaRecorder;
+      chunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          chunksRef.current.push(e.data);
+        }
+      };
+
+      mediaRecorder.start(1000); // Collect data every second
+      setIsRecording(true);
+    } catch (error) {
+      console.error('Failed to start recording:', error);
+      alert('לא הצלחתי לגשת למיקרופון. אנא אשרי גישה למיקרופון.');
+    }
+  }, []);
+
+  const stopRecording = useCallback(async (): Promise<string | null> => {
+    return new Promise((resolve) => {
+      if (!mediaRecorderRef.current) {
+        resolve(null);
+        return;
+      }
+
+      mediaRecorderRef.current.onstop = async () => {
+        setIsRecording(false);
+        setIsTranscribing(true);
+
+        try {
+          const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
+          
+          // Convert blob to base64
+          const reader = new FileReader();
+          reader.onloadend = async () => {
+            const base64 = (reader.result as string).split(',')[1];
+            
+            try {
+              const response = await assistantApi.transcribe({
+                audioBase64: base64,
+                filename: 'recording.webm',
+              });
+              
+              setIsTranscribing(false);
+              resolve(response.data?.data?.transcript || null);
+            } catch (error) {
+              console.error('Transcription failed:', error);
+              setIsTranscribing(false);
+              resolve(null);
+            }
+          };
+          reader.readAsDataURL(audioBlob);
+        } catch (error) {
+          console.error('Failed to process recording:', error);
+          setIsTranscribing(false);
+          resolve(null);
+        }
+
+        // Stop all tracks
+        mediaRecorderRef.current?.stream.getTracks().forEach(track => track.stop());
+      };
+
+      mediaRecorderRef.current.stop();
+    });
+  }, []);
+
+  return { isRecording, isTranscribing, startRecording, stopRecording };
+}
 
 interface DailyIdea {
   filmingIdea: string;
@@ -26,7 +105,7 @@ interface MomModeData {
 
 export default function MomMode() {
   const queryClient = useQueryClient();
-  const [isRecording, setIsRecording] = useState(false);
+  const { isRecording, isTranscribing, startRecording, stopRecording } = useAudioRecorder();
   const [transcript, setTranscript] = useState('');
   const [showIdeaInput, setShowIdeaInput] = useState(false);
   const [ideaText, setIdeaText] = useState('');
@@ -43,8 +122,8 @@ export default function MomMode() {
 
   // Voice post mutation
   const voicePostMutation = useMutation({
-    mutationFn: (transcript: string) => 
-      assistantApi.createVoicePost({ transcript, platforms: ['instagram', 'facebook', 'tiktok'] }),
+    mutationFn: (transcriptText: string) => 
+      assistantApi.createVoicePost({ transcript: transcriptText, platforms: ['instagram', 'facebook', 'tiktok'] }),
     onSuccess: () => {
       showSuccessToast('הפוסט נוצר בהצלחה! 🎉');
       setTranscript('');
@@ -70,14 +149,16 @@ export default function MomMode() {
     setTimeout(() => setShowSuccess(false), 3000);
   };
 
-  // Simulated voice recording (in production, use Web Speech API)
-  const toggleRecording = () => {
+  // Real voice recording with Whisper transcription
+  const toggleRecording = async () => {
     if (isRecording) {
-      setIsRecording(false);
-      // In production, this would stop recording and get the transcript
+      const transcribedText = await stopRecording();
+      if (transcribedText) {
+        setTranscript(prev => prev ? `${prev}\n${transcribedText}` : transcribedText);
+        showSuccessToast('ההקלטה תומללה! ✨');
+      }
     } else {
-      setIsRecording(true);
-      // In production, this would start recording
+      await startRecording();
     }
   };
 
@@ -151,16 +232,25 @@ export default function MomMode() {
         {/* Recording Button */}
         <button
           onClick={toggleRecording}
+          disabled={isTranscribing}
           className={`w-24 h-24 mx-auto mb-4 rounded-full flex items-center justify-center transition-all ${
-            isRecording 
-              ? 'bg-red-500 animate-pulse scale-110' 
-              : 'bg-gradient-to-r from-purple-500 to-pink-500 hover:scale-105'
-          }`}
+            isTranscribing
+              ? 'bg-blue-500 animate-spin-slow'
+              : isRecording 
+                ? 'bg-red-500 animate-pulse scale-110' 
+                : 'bg-gradient-to-r from-purple-500 to-pink-500 hover:scale-105'
+          } ${isTranscribing ? 'cursor-wait' : ''}`}
         >
           <span className="text-4xl text-white">
-            {isRecording ? '⏹️' : '🎤'}
+            {isTranscribing ? '⏳' : isRecording ? '⏹️' : '🎤'}
           </span>
         </button>
+        {isTranscribing && (
+          <p className="text-center text-blue-600 text-sm mb-2">מתמלל את ההקלטה...</p>
+        )}
+        {isRecording && (
+          <p className="text-center text-red-600 text-sm mb-2 animate-pulse">מקליט... לחצי שוב לעצור</p>
+        )}
 
         {/* Transcript Input */}
         <textarea
