@@ -46,7 +46,7 @@ export default function Layout({ children }: LayoutProps) {
         <div className="p-4 border-b border-mziv-border">
           <Link
             to="/mom"
-            className="flex items-center gap-3 px-4 py-3 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:opacity-90 transition-opacity"
+            className="flex items-center gap-3 px-4 py-3 rounded-xl bg-brand-primary text-white hover:bg-brand-dark transition-colors"
           >
             <span className="text-xl">✨</span>
             <span className="font-medium">מצב פשוט</span>

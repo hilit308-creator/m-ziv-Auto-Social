@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Plus, Edit, Trash2, Send, RefreshCw, Image, Calendar, Instagram, Facebook, Linkedin, Youtube, Clock, Sparkles } from 'lucide-react';
+import { useEffect, useState, useRef } from 'react';
+import { Plus, Edit, Trash2, Send, RefreshCw, Image, Calendar, Instagram, Facebook, Linkedin, Youtube, Clock, Sparkles, Smartphone } from 'lucide-react';
 import { postsApi, publishApi } from '../services/api';
 
 interface Post {
@@ -25,6 +25,21 @@ export default function Posts() {
   const [newPostSchedule, setNewPostSchedule] = useState<string>('');
   const [newPostTime, setNewPostTime] = useState<string>('');
   const [generateImage, setGenerateImage] = useState(false);
+  const [uploadedImagePreview, setUploadedImagePreview] = useState<string | null>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const base64 = event.target?.result as string;
+        setUploadedImagePreview(base64);
+        setNewPostImage(base64);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
   const [showEditModal, setShowEditModal] = useState(false);
   const [rewriting, setRewriting] = useState<string | null>(null);
   const [publishing, setPublishing] = useState<string | null>(null);
@@ -316,12 +331,57 @@ export default function Posts() {
               </div>
               
               {!generateImage && (
-                <div className="mt-4">
+                <div className="mt-4 space-y-4">
+                  {/* Hidden file input */}
+                  <input
+                    type="file"
+                    ref={imageInputRef}
+                    onChange={handleImageUpload}
+                    accept="image/*"
+                    className="hidden"
+                  />
+                  
+                  {/* Upload button */}
+                  <div 
+                    onClick={() => imageInputRef.current?.click()}
+                    className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center cursor-pointer hover:border-brand-primary hover:bg-brand-light transition-all"
+                  >
+                    {uploadedImagePreview ? (
+                      <div>
+                        <img 
+                          src={uploadedImagePreview} 
+                          alt="תצוגה מקדימה" 
+                          className="max-h-40 mx-auto rounded-lg mb-2"
+                        />
+                        <p className="text-sm text-gray-500">לחץ להחלפה</p>
+                      </div>
+                    ) : (
+                      <div>
+                        <Smartphone size={32} className="mx-auto mb-2 text-gray-400" />
+                        <p className="font-medium text-gray-700">לחץ להעלאת תמונה</p>
+                        <p className="text-sm text-gray-500">מהטלפון או מהמחשב</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Or URL input */}
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-gray-200"></div>
+                    </div>
+                    <div className="relative flex justify-center text-sm">
+                      <span className="px-2 bg-white text-gray-500">או</span>
+                    </div>
+                  </div>
+                  
                   <input
                     type="text"
-                    value={newPostImage}
-                    onChange={(e) => setNewPostImage(e.target.value)}
-                    placeholder="הכנס קישור לתמונה או URL"
+                    value={newPostImage.startsWith('data:') ? '' : newPostImage}
+                    onChange={(e) => {
+                      setNewPostImage(e.target.value);
+                      setUploadedImagePreview(null);
+                    }}
+                    placeholder="הכנס קישור לתמונה (URL)"
                     className="input"
                   />
                 </div>
@@ -370,6 +430,7 @@ export default function Posts() {
                   setNewPostSchedule('');
                   setNewPostTime('');
                   setGenerateImage(false);
+                  setUploadedImagePreview(null);
                 }}
                 className="btn-secondary"
               >
