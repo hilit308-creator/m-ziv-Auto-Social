@@ -24,6 +24,8 @@ import userRoutes from './routes/user.routes';
 import templatesRoutes from './routes/templates.routes';
 import auditRoutes from './routes/audit.routes';
 import spamRoutes from './routes/spam.routes';
+import connectRoutes from './routes/connect.routes';
+import path from 'path';
 
 dotenv.config();
 
@@ -35,8 +37,11 @@ app.use(cors({
   origin: process.env.CORS_ORIGIN?.split(',') || '*',
   credentials: true,
 }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// Serve uploaded files statically
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 const limiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'),
@@ -76,6 +81,9 @@ app.use('/api/scheduler', schedulerRoutes);
 
 // Social auth routes
 app.use('/api/auth', authRoutes);
+
+// OAuth Connect routes (for Shortcut)
+app.use('/api/v1/connect', connectRoutes);
 
 // Auto-publish routes
 app.use('/api/publish', publishRoutes);

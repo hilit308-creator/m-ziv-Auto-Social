@@ -388,6 +388,42 @@ model AITemplate {
   updatedAt   DateTime @updatedAt
 }
 
+// MediaUpload - קבצי מדיה שהועלו
+model MediaUpload {
+  id            String   @id @default(cuid())
+  
+  originalName  String
+  mimeType      String
+  size          Int      // bytes
+  duration      Int?     // seconds (for video)
+  
+  // Storage
+  storagePath   String   // local path or cloud URL
+  publicUrl     String?  // publicly accessible URL
+  
+  createdAt     DateTime @default(now())
+}
+
+// PublishJob - עבודת פרסום לכל הרשתות
+model PublishJob {
+  id            String   @id @default(cuid())
+  
+  mediaId       String?  // MediaUpload id
+  postId        String?  // Post id (for content)
+  videoDescription String?
+  
+  // Per-platform status (JSON)
+  // { "instagram": { "status": "queued", "url": null, "error": null }, ... }
+  platformStatuses String @default("{}")
+  
+  // Overall
+  status        String   @default("pending") // pending, processing, completed, partial_failure
+  scheduledAt   DateTime?
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
 // AuditLog - לוג פעולות
 model AuditLog {
   id          String   @id @default(cuid())

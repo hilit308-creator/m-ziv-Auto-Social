@@ -279,7 +279,7 @@ export class MZivService {
     const input: PostPackInput = {
       video_description: rawInput.video_description,
       voice_notes: rawInput.voice_notes,
-      platforms: rawInput.platforms || ['instagram', 'tiktok', 'linkedin', 'youtube'],
+      platforms: rawInput.platforms || ['instagram', 'facebook', 'tiktok', 'youtube'],
       brand_profile: rawInput.brand_profile || brandDefaults,
       constraints: rawInput.constraints || constraintDefaults,
     };

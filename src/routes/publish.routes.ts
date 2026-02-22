@@ -1,7 +1,27 @@
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { autoPublishService } from '../services/auto-publish.service';
+import prisma from '../db/database';
+import { mzivService } from '../services/mziv.service';
 
 const router = Router();
+
+// Middleware for API key authentication (supports both Bearer and x-api-key)
+const authenticateApiKey = (req: Request, res: Response, next: NextFunction) => {
+  const apiKey = 
+    req.headers['x-api-key'] as string ||
+    req.headers.authorization?.replace('Bearer ', '');
+  
+  if (!apiKey || apiKey !== process.env.MZIV_API_KEY) {
+    return res.status(401).json({
+      success: false,
+      error: 'Unauthorized - Invalid or missing API key',
+    });
+  }
+  
+  next();
+};
+
+router.use(authenticateApiKey);
 
 router.get('/status', async (_req: Request, res: Response) => {
   try {
@@ -19,6 +39,197 @@ router.get('/status', async (_req: Request, res: Response) => {
     return res.status(500).json({
       success: false,
       error: error.message || 'Failed to get publish status',
+    });
+  }
+});
+
+// POST /publish/all - Publish to all connected platforms (Shortcut main endpoint)
+router.post('/all', async (req: Request, res: Response) => {
+  try {
+    const { media_id, video_description, targets, schedule_time } = req.body;
+
+    if (!video_description) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required field: video_description',
+      });
+    }
+
+    // Determine target platforms
+    const defaultTargets = ['instagram', 'facebook_page', 'tiktok', 'youtube'];
+    const requestedTargets = targets || defaultTargets;
+
+    // Check which platforms are connected
+    const connectedAccounts = await prisma.socialAccount.findMany({
+      where: { isActive: true, platform: { in: requestedTargets } },
+    });
+    const connectedPlatforms = connectedAccounts.map(a => a.platform);
+
+    // Build initial platform statuses
+    const platformStatuses: Record<string, any> = {};
+    for (const target of requestedTargets) {
+      if (connectedPlatforms.includes(target)) {
+        platformStatuses[target] = { status: 'queued', url: null, error: null };
+      } else {
+        platformStatuses[target] = { status: 'skipped', url: null, error: 'not_connected' };
+      }
+    }
+
+    // Generate content with post-pack
+    let postPack: any = null;
+    try {
+      postPack = await mzivService.generatePostPack({ video_description });
+    } catch (e: any) {
+      console.error('[publish/all] Failed to generate post-pack:', e.message);
+    }
+
+    // Get media info if provided
+    let mediaUrl: string | null = null;
+    if (media_id) {
+      const media = await prisma.mediaUpload.findUnique({ where: { id: media_id } });
+      if (media) {
+        mediaUrl = media.publicUrl;
+      }
+    }
+
+    // Create publish job
+    const job = await prisma.publishJob.create({
+      data: {
+        mediaId: media_id || null,
+        postId: postPack?.post_id || null,
+        videoDescription: video_description,
+        platformStatuses: JSON.stringify(platformStatuses),
+        status: 'processing',
+        scheduledAt: schedule_time ? new Date(schedule_time) : null,
+      },
+    });
+
+    // If scheduled for later, just return the job
+    if (schedule_time) {
+      return res.json({
+        success: true,
+        data: {
+          job_id: job.id,
+          scheduled_at: schedule_time,
+          targets: platformStatuses,
+        },
+      });
+    }
+
+    // Publish to each connected platform (async, non-blocking)
+    (async () => {
+      for (const account of connectedAccounts) {
+        const platform = account.platform;
+        try {
+          platformStatuses[platform] = { status: 'publishing', url: null, error: null };
+          await prisma.publishJob.update({
+            where: { id: job.id },
+            data: { platformStatuses: JSON.stringify(platformStatuses) },
+          });
+
+          const result = await autoPublishService.publishToPlatformWithToken(
+            platform,
+            account.accessToken,
+            account.accountId,
+            {
+              caption: postPack?.by_platform?.[platform === 'facebook_page' ? 'facebook' : platform]?.caption || video_description,
+              hashtags: postPack?.by_platform?.[platform === 'facebook_page' ? 'facebook' : platform]?.hashtags || [],
+              title: postPack?.by_platform?.youtube?.title,
+              description: postPack?.by_platform?.youtube?.description,
+              mediaUrl,
+            }
+          );
+
+          if (result.success) {
+            platformStatuses[platform] = { status: 'published', url: result.post_url || null, error: null };
+          } else {
+            platformStatuses[platform] = { status: 'failed', url: null, error: result.error || 'unknown_error' };
+          }
+        } catch (e: any) {
+          platformStatuses[platform] = { status: 'failed', url: null, error: e.message };
+        }
+
+        await prisma.publishJob.update({
+          where: { id: job.id },
+          data: { platformStatuses: JSON.stringify(platformStatuses) },
+        });
+      }
+
+      // Update overall status
+      const allStatuses = Object.values(platformStatuses).map((s: any) => s.status);
+      const hasPublished = allStatuses.includes('published');
+      const hasFailed = allStatuses.includes('failed');
+      let overallStatus = 'completed';
+      if (hasFailed && hasPublished) overallStatus = 'partial_failure';
+      else if (hasFailed && !hasPublished) overallStatus = 'failed';
+
+      await prisma.publishJob.update({
+        where: { id: job.id },
+        data: { status: overallStatus, platformStatuses: JSON.stringify(platformStatuses) },
+      });
+
+      console.log(`[publish/all] Job ${job.id} completed: ${overallStatus}`);
+    })();
+
+    return res.json({
+      success: true,
+      data: {
+        job_id: job.id,
+        targets: platformStatuses,
+        post_pack: postPack ? {
+          hook: postPack.hook,
+          caption: postPack.caption,
+          hashtags: postPack.hashtags,
+        } : null,
+      },
+    });
+  } catch (error: any) {
+    console.error('Error in publish/all:', error);
+    return res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to start publishing',
+    });
+  }
+});
+
+// GET /publish/status?job_id=X - Poll publish job status
+router.get('/job-status', async (req: Request, res: Response) => {
+  try {
+    const jobId = req.query.job_id as string;
+
+    if (!jobId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required query parameter: job_id',
+      });
+    }
+
+    const job = await prisma.publishJob.findUnique({ where: { id: jobId } });
+
+    if (!job) {
+      return res.status(404).json({
+        success: false,
+        error: 'Job not found',
+      });
+    }
+
+    const platformStatuses = JSON.parse(job.platformStatuses);
+
+    return res.json({
+      success: true,
+      data: {
+        job_id: job.id,
+        status: job.status,
+        platforms: platformStatuses,
+        created_at: job.createdAt,
+        updated_at: job.updatedAt,
+      },
+    });
+  } catch (error: any) {
+    console.error('Error getting job status:', error);
+    return res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to get job status',
     });
   }
 });

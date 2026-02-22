@@ -369,6 +369,174 @@ export class AutoPublishService {
     }
   }
 
+  // Publish to a specific platform using DB-stored token (called by /publish/all)
+  async publishToPlatformWithToken(
+    platform: string,
+    accessToken: string,
+    accountId: string,
+    content: {
+      caption: string;
+      hashtags?: string[];
+      title?: string;
+      description?: string;
+      mediaUrl?: string | null;
+    }
+  ): Promise<PublishResult> {
+    const fullCaption = content.hashtags?.length 
+      ? `${content.caption}\n\n${content.hashtags.join(' ')}`
+      : content.caption;
+
+    try {
+      if (platform === 'instagram') {
+        if (!content.mediaUrl) {
+          return { platform, success: false, error: 'Instagram requires media (image or video)' };
+        }
+
+        // Step 1: Create media container
+        const containerResponse = await axios.post(
+          `https://graph.facebook.com/v18.0/${accountId}/media`,
+          {
+            video_url: content.mediaUrl,
+            caption: fullCaption,
+            media_type: 'REELS',
+            access_token: accessToken,
+          }
+        );
+        const containerId = containerResponse.data.id;
+
+        // Step 2: Publish
+        const publishResponse = await axios.post(
+          `https://graph.facebook.com/v18.0/${accountId}/media_publish`,
+          { creation_id: containerId, access_token: accessToken }
+        );
+
+        return {
+          platform,
+          success: true,
+          post_id: publishResponse.data.id,
+          post_url: `https://www.instagram.com/reel/${publishResponse.data.id}/`,
+        };
+      }
+
+      if (platform === 'facebook_page') {
+        if (content.mediaUrl) {
+          const response = await axios.post(
+            `https://graph.facebook.com/v18.0/${accountId}/videos`,
+            {
+              file_url: content.mediaUrl,
+              description: fullCaption,
+              access_token: accessToken,
+            }
+          );
+          return {
+            platform,
+            success: true,
+            post_id: response.data.id,
+            post_url: `https://www.facebook.com/${response.data.id}`,
+          };
+        } else {
+          const response = await axios.post(
+            `https://graph.facebook.com/v18.0/${accountId}/feed`,
+            { message: fullCaption, access_token: accessToken }
+          );
+          return {
+            platform,
+            success: true,
+            post_id: response.data.id,
+            post_url: `https://www.facebook.com/${response.data.id}`,
+          };
+        }
+      }
+
+      if (platform === 'tiktok') {
+        if (!content.mediaUrl) {
+          return { platform, success: false, error: 'TikTok requires a video' };
+        }
+
+        const initResponse = await axios.post(
+          'https://open.tiktokapis.com/v2/post/publish/video/init/',
+          {
+            post_info: {
+              title: content.caption.substring(0, 150),
+              privacy_level: 'PUBLIC_TO_EVERYONE',
+              disable_duet: false,
+              disable_stitch: false,
+              disable_comment: false,
+            },
+            source_info: {
+              source: 'PULL_FROM_URL',
+              video_url: content.mediaUrl,
+            },
+          },
+          {
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+
+        return {
+          platform,
+          success: true,
+          post_id: initResponse.data.data?.publish_id,
+          post_url: `https://www.tiktok.com/@${accountId}`,
+        };
+      }
+
+      if (platform === 'youtube') {
+        if (!content.mediaUrl) {
+          return { platform, success: false, error: 'YouTube requires a video' };
+        }
+
+        const metadata = {
+          snippet: {
+            title: content.title || content.caption.substring(0, 60),
+            description: content.description || fullCaption,
+            tags: content.hashtags?.map(h => h.replace('#', '')) || [],
+            categoryId: '22',
+          },
+          status: {
+            privacyStatus: 'public',
+            selfDeclaredMadeForKids: false,
+          },
+        };
+
+        const response = await axios.post(
+          'https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status',
+          metadata,
+          {
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+              'Content-Type': 'application/json',
+              'X-Upload-Content-Type': 'video/*',
+            },
+          }
+        );
+
+        const uploadUrl = response.headers['location'];
+        return {
+          platform,
+          success: true,
+          post_id: 'pending-upload',
+          post_url: uploadUrl || 'https://youtube.com',
+        };
+      }
+
+      return { platform, success: false, error: `Unsupported platform: ${platform}` };
+    } catch (error: any) {
+      const errorMsg = error.response?.data?.error?.message || error.response?.data?.message || error.message;
+      console.error(`[publish] ${platform} failed:`, errorMsg);
+      
+      // Detect token issues
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        return { platform, success: false, error: 'expired_token' };
+      }
+      
+      return { platform, success: false, error: errorMsg };
+    }
+  }
+
   // Process scheduled posts that are ready to publish
   async processScheduledPosts(): Promise<{ processed: number; results: any[] }> {
     const now = new Date();
