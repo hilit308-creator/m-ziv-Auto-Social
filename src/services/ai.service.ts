@@ -27,6 +27,7 @@ export class AIService {
   constructor() {
     this.openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
+      timeout: 15000,
     });
 
     this._anthropic = new Anthropic({

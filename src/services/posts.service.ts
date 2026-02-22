@@ -8,6 +8,7 @@ export type RewriteCommand =
   | 'longer'
   | 'more_professional'
   | 'more_warm'
+  | 'warmer'
   | 'add_cta'
   | 'remove_emojis'
   | 'add_emojis'
@@ -382,6 +383,7 @@ export class PostsService {
       longer: 'הרחב את הטקסט עם פרטים נוספים ודוגמאות',
       more_professional: 'הפוך את הטקסט למקצועי יותר, פורמלי יותר',
       more_warm: 'הפוך את הטקסט לחם יותר, אישי יותר, ידידותי',
+      warmer: 'הפוך את הטקסט לחם, אישי וקרוב יותר',
       add_cta: 'הוסף קריאה לפעולה ברורה בסוף הטקסט',
       remove_emojis: 'הסר את כל האמוג\'ים מהטקסט',
       add_emojis: 'הוסף אמוג\'ים רלוונטיים לטקסט (מעט, לא יותר מ-3)',

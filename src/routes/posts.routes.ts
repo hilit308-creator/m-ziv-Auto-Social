@@ -154,7 +154,7 @@ router.post('/:id/rewrite', async (req: Request, res: Response) => {
     const { command, platform } = req.body;
 
     const validCommands: RewriteCommand[] = [
-      'shorter', 'longer', 'more_professional', 'more_warm',
+      'shorter', 'longer', 'more_professional', 'more_warm', 'warmer',
       'add_cta', 'remove_emojis', 'add_emojis',
       'instagram_style', 'linkedin_style', 'tiktok_style', 'youtube_style',
     ];
