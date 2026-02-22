@@ -46,6 +46,13 @@ const limiter = rateLimit({
 
 app.use('/api/', limiter);
 
+// Request logging middleware
+app.use('/api/', (req: Request, _res: Response, next: NextFunction) => {
+  const timestamp = new Date().toISOString();
+  console.log(`[API] ${timestamp} ${req.method} ${req.originalUrl}`);
+  next();
+});
+
 // M-Ziv AI Social routes
 app.use('/api/v1', mzivRoutes);
 

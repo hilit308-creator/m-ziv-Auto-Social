@@ -1,5 +1,6 @@
 import OpenAI from 'openai';
 import dotenv from 'dotenv';
+import { prisma } from '../db/database';
 
 dotenv.config();
 
@@ -111,6 +112,7 @@ export class MZivService {
   constructor() {
     this.openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
+      timeout: 15000, // 15 second timeout for Shortcut responsiveness
     });
   }
 
@@ -346,6 +348,31 @@ export class MZivService {
       results.caption = first.caption || first.description || '';
       results.cta = first.cta || '';
       results.hashtags = first.hashtags || [];
+    }
+
+    // Save generated post to DB for history
+    try {
+      const saved = await prisma.post.create({
+        data: {
+          topic: input.video_description,
+          voiceNotes: input.voice_notes || null,
+          status: 'draft',
+          instagramCaption: results.by_platform.instagram?.caption || null,
+          instagramHashtags: results.by_platform.instagram?.hashtags?.join(',') || null,
+          facebookCaption: results.by_platform.facebook?.caption || null,
+          tiktokCaption: results.by_platform.tiktok?.caption || null,
+          tiktokHashtags: results.by_platform.tiktok?.hashtags?.join(',') || null,
+          youtubeTitle: results.by_platform.youtube?.title || null,
+          youtubeDescription: results.by_platform.youtube?.description || null,
+          youtubeTags: results.by_platform.youtube?.hashtags?.join(',') || null,
+          linkedinCaption: results.by_platform.linkedin?.caption || null,
+        },
+      });
+      results.post_id = saved.id;
+      console.log(`[post-pack] Created post ${saved.id} for: "${input.video_description.substring(0, 40)}..."`);
+    } catch (dbError) {
+      // DB save failure should not break the response
+      console.error('[post-pack] Failed to save to DB:', dbError);
     }
 
     return results;
