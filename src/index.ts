@@ -45,11 +45,19 @@ app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 const limiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'),
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100'),
-  message: 'Too many requests from this IP, please try again later.',
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '500'),
+  message: { success: false, error: 'Too many requests, please try again later.' },
 });
 
 app.use('/api/', limiter);
+
+// Request timeout (60s for most, 120s for upload/publish)
+app.use((req: Request, res: Response, next: NextFunction) => {
+  const timeout = (req.path.includes('/upload') || req.path.includes('/publish')) ? 120000 : 60000;
+  req.setTimeout(timeout);
+  res.setTimeout(timeout);
+  next();
+});
 
 // Request logging middleware
 app.use('/api/', (req: Request, _res: Response, next: NextFunction) => {
@@ -121,9 +129,28 @@ app.use('/api/assistant', assistantRoutes);
 app.get('/', (_req: Request, res: Response) => {
   res.json({
     name: 'M-Ziv Auto Social API',
-    version: '1.0.0',
+    version: '2.0.0',
     status: 'running',
-    endpoints: {
+    shortcut_endpoints: {
+      connect: {
+        status: 'GET /api/v1/connect/status',
+        start: 'GET /api/v1/connect/:provider/start',
+        callback: 'GET /api/v1/connect/:provider/callback',
+        disconnect: 'POST /api/v1/connect/:provider/disconnect',
+      },
+      media: {
+        upload: 'POST /api/media/upload (multipart, field=file)',
+      },
+      publish: {
+        all: 'POST /api/publish/all',
+        jobStatus: 'GET /api/publish/job-status?job_id=X',
+      },
+      generate: {
+        postPack: 'POST /api/v1/generate/post-pack',
+        dailyIdea: 'GET /api/assistant/daily-idea',
+      },
+    },
+    all_endpoints: {
       health: 'GET /health',
       mziv: {
         caption: 'POST /api/v1/generate/caption',
@@ -224,12 +251,29 @@ app.get('/', (_req: Request, res: Response) => {
   });
 });
 
-app.get('/health', (_req: Request, res: Response) => {
-  res.json({
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-  });
+app.get('/health', async (_req: Request, res: Response) => {
+  try {
+    // Quick DB check
+    const dbOk = await import('./db/database').then(m => m.default.$queryRaw`SELECT 1`).then(() => true).catch(() => false);
+    
+    // Quick connect status
+    const prisma = (await import('./db/database')).default;
+    const connectedCount = await prisma.socialAccount.count({ where: { isActive: true } }).catch(() => 0);
+
+    res.json({
+      status: dbOk ? 'healthy' : 'degraded',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      db: dbOk ? 'ok' : 'error',
+      connected_platforms: connectedCount,
+    });
+  } catch {
+    res.json({
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+    });
+  }
 });
 
 app.post('/api/ai/generate-post', async (req: Request, res: Response, next: NextFunction) => {
