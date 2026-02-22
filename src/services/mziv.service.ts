@@ -229,28 +229,59 @@ export class MZivService {
   }
 
   async generatePostPack(rawInput: Partial<PostPackInput> & { video_description: string }): Promise<any> {
-    // Smart defaults so Shortcut only needs to send video_description
+    // Load brand profile from DB if not provided (so Shortcut only sends video_description)
+    let brandDefaults: BrandProfile = {
+      name: 'M-Ziv',
+      business_type: 'ייעוץ עסקי',
+      tone: 'מקצועי, חם ואישי',
+      language: 'he-IL',
+      default_cta: 'שלחו לי הודעה לפרטים נוספים 💬',
+    };
+
+    let constraintDefaults = {
+      emoji_level: 'medium',
+      length_by_platform: {
+        instagram: 80,
+        tiktok: 50,
+        linkedin: 120,
+        youtube: 150,
+        facebook: 100,
+      } as { [key: string]: number },
+    };
+
+    if (!rawInput.brand_profile) {
+      try {
+        const dbProfile = await prisma.brandProfile.findFirst();
+        if (dbProfile) {
+          brandDefaults = {
+            name: dbProfile.name,
+            business_type: dbProfile.businessType,
+            tone: dbProfile.tone,
+            language: dbProfile.language === 'עברית' ? 'he-IL' : dbProfile.language,
+            default_cta: dbProfile.defaultCta,
+          };
+          constraintDefaults = {
+            emoji_level: dbProfile.emojiLevel,
+            length_by_platform: {
+              instagram: dbProfile.maxWordsInstagram,
+              tiktok: dbProfile.maxWordsTiktok,
+              linkedin: dbProfile.maxWordsLinkedin,
+              youtube: dbProfile.maxWordsYoutube,
+              facebook: dbProfile.maxWordsFacebook,
+            },
+          };
+        }
+      } catch (e) {
+        console.warn('[post-pack] Could not load brand profile from DB, using defaults');
+      }
+    }
+
     const input: PostPackInput = {
       video_description: rawInput.video_description,
       voice_notes: rawInput.voice_notes,
       platforms: rawInput.platforms || ['instagram', 'tiktok', 'linkedin', 'youtube'],
-      brand_profile: rawInput.brand_profile || {
-        name: 'M-Ziv',
-        business_type: 'ייעוץ עסקי',
-        tone: 'מקצועי, חם ואישי',
-        language: 'he-IL',
-        default_cta: 'שלחו לי הודעה לפרטים נוספים 💬',
-      },
-      constraints: rawInput.constraints || {
-        emoji_level: 'medium',
-        length_by_platform: {
-          instagram: 80,
-          tiktok: 50,
-          linkedin: 120,
-          youtube: 150,
-          facebook: 100,
-        },
-      },
+      brand_profile: rawInput.brand_profile || brandDefaults,
+      constraints: rawInput.constraints || constraintDefaults,
     };
 
     // If single platform requested as string
