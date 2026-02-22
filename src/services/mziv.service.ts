@@ -226,11 +226,44 @@ export class MZivService {
     };
   }
 
-  async generatePostPack(input: PostPackInput): Promise<any> {
+  async generatePostPack(rawInput: Partial<PostPackInput> & { video_description: string }): Promise<any> {
+    // Smart defaults so Shortcut only needs to send video_description
+    const input: PostPackInput = {
+      video_description: rawInput.video_description,
+      voice_notes: rawInput.voice_notes,
+      platforms: rawInput.platforms || ['instagram', 'tiktok', 'linkedin', 'youtube'],
+      brand_profile: rawInput.brand_profile || {
+        name: 'M-Ziv',
+        business_type: 'ייעוץ עסקי',
+        tone: 'מקצועי, חם ואישי',
+        language: 'he-IL',
+        default_cta: 'שלחו לי הודעה לפרטים נוספים 💬',
+      },
+      constraints: rawInput.constraints || {
+        emoji_level: 'medium',
+        length_by_platform: {
+          instagram: 80,
+          tiktok: 50,
+          linkedin: 120,
+          youtube: 150,
+          facebook: 100,
+        },
+      },
+    };
+
+    // If single platform requested as string
+    if (typeof (rawInput as any).platform === 'string' && !rawInput.platforms) {
+      input.platforms = [(rawInput as any).platform];
+    }
+
     const results: any = {
+      hook: '',
+      caption: '',
+      cta: '',
+      hashtags: [] as string[],
       by_platform: {},
       meta: {
-        topic: '',
+        topic: input.video_description.substring(0, 60),
         content_type: 'educational',
         best_platform_suggestion: 'instagram',
         publish_time_suggestion: 'Morning (8-10 AM) or Evening (6-8 PM)',
@@ -305,19 +338,41 @@ export class MZivService {
       }
     }
 
+    // Set top-level fields from the first platform (for easy Shortcut access)
+    const firstPlatform = input.platforms[0];
+    if (results.by_platform[firstPlatform]) {
+      const first = results.by_platform[firstPlatform];
+      results.hook = first.hook || first.title || '';
+      results.caption = first.caption || first.description || '';
+      results.cta = first.cta || '';
+      results.hashtags = first.hashtags || [];
+    }
+
     return results;
   }
 
-  async rewriteText(input: RewriteInput): Promise<any> {
+  async rewriteText(rawInput: Partial<RewriteInput> & { text: string; command: string }): Promise<any> {
+    const input: RewriteInput = {
+      text: rawInput.text,
+      command: rawInput.command,
+      platform: rawInput.platform || 'instagram',
+      language: rawInput.language || 'he-IL',
+    };
+
     const commandMap: { [key: string]: string } = {
       shorter: 'קצר יותר את הטקסט, שמור על המסר העיקרי',
       more_professional: 'הפוך את הטקסט למקצועי יותר',
       more_warm: 'הפוך את הטקסט לחם ואישי יותר',
+      warmer: 'הפוך את הטקסט לחם, אישי וקרוב יותר',
       more_salesy: 'הוסף אלמנטים שיווקיים חזקים יותר',
-      add_cta: 'הוסף קריאה לפעולה ברורה',
+      add_cta: 'הוסף קריאה לפעולה ברורה וחזקה בסוף הטקסט',
       remove_emojis: 'הסר את כל האימוג׳ים',
       add_emojis_low: 'הוסף 1-2 אימוג׳ים מתאימים',
       make_linkedin_style: 'התאם לסגנון לינקדאין מקצועי',
+      linkedin_style: 'התאם את הטקסט לסגנון לינקדאין: מקצועי, ערכי, עם שורות קצרות ופסקאות',
+      tiktok_style: 'התאם את הטקסט לסגנון טיקטוק: קצר, ישיר, עם הוק חזק בהתחלה, אימוג׳ים',
+      instagram_style: 'התאם את הטקסט לסגנון אינסטגרם: אישי, חם, עם האשטגים',
+      youtube_style: 'התאם את הטקסט לסגנון יוטיוב: כותרת מסקרנת ותיאור מפורט',
     };
 
     const instruction = commandMap[input.command] || input.command;

@@ -3,9 +3,11 @@ import { assistantService } from '../services/assistant.service';
 
 const router = Router();
 
-// Middleware for API key authentication
+// Middleware for API key authentication (supports both Bearer and x-api-key)
 const authenticateApiKey = (req: Request, res: Response, next: NextFunction) => {
-  const apiKey = req.headers.authorization?.replace('Bearer ', '');
+  const apiKey = 
+    req.headers['x-api-key'] as string ||
+    req.headers.authorization?.replace('Bearer ', '');
   
   if (!apiKey || apiKey !== process.env.MZIV_API_KEY) {
     return res.status(401).json({
@@ -338,7 +340,13 @@ router.get('/daily-idea', async (req: Request, res: Response, next: NextFunction
     const idea = await assistantService.generateDailyIdea();
     res.json({
       success: true,
-      data: idea,
+      data: {
+        ...idea,
+        // Shortcut-friendly aliases
+        topic: idea.filmingIdea,
+        hook: idea.suggestedHook,
+        content_type: idea.contentType,
+      },
     });
   } catch (error) {
     next(error);
