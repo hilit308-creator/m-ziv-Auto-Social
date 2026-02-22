@@ -35,28 +35,58 @@ const DEFAULT_USER_ID = 'default-user';
 // GET /connect/status - Get connection status for all platforms
 router.get('/status', async (_req: Request, res: Response) => {
   try {
-    const statuses: Record<string, string> = {};
+    const platforms: Record<string, any> = {};
 
     for (const provider of VALID_PROVIDERS) {
+      const platformKey = provider === 'facebook' ? 'facebook_page' : provider;
       const account = await prisma.socialAccount.findFirst({
         where: {
-          platform: provider === 'facebook' ? 'facebook_page' : provider,
+          platform: platformKey,
           isActive: true,
         },
       });
 
       if (!account) {
-        statuses[provider === 'facebook' ? 'facebook_page' : provider] = 'not_connected';
+        platforms[platformKey] = {
+          status: 'not_connected',
+          account_name: null,
+          expires_at: null,
+          reason: 'לא חובר עדיין',
+        };
       } else if (account.tokenExpiry && account.tokenExpiry < new Date()) {
-        statuses[provider === 'facebook' ? 'facebook_page' : provider] = 'expired';
+        platforms[platformKey] = {
+          status: 'expired',
+          account_name: account.accountName,
+          expires_at: account.tokenExpiry.toISOString(),
+          reason: 'הטוקן פג תוקף — צריך להתחבר מחדש',
+        };
       } else {
-        statuses[provider === 'facebook' ? 'facebook_page' : provider] = 'connected';
+        platforms[platformKey] = {
+          status: 'connected',
+          account_name: account.accountName,
+          expires_at: account.tokenExpiry ? account.tokenExpiry.toISOString() : null,
+          reason: null,
+        };
       }
     }
 
+    // Summary counts
+    const values = Object.values(platforms);
+    const connected = values.filter((v: any) => v.status === 'connected').length;
+    const expired = values.filter((v: any) => v.status === 'expired').length;
+    const notConnected = values.filter((v: any) => v.status === 'not_connected').length;
+
     return res.json({
       success: true,
-      data: statuses,
+      data: {
+        platforms,
+        summary: {
+          connected,
+          expired,
+          not_connected: notConnected,
+          total: VALID_PROVIDERS.length,
+        },
+      },
     });
   } catch (error: any) {
     console.error('Error getting connection status:', error);
@@ -296,12 +326,18 @@ router.post('/:provider/disconnect', async (req: Request, res: Response) => {
 
     await prisma.socialAccount.update({
       where: { id: account.id },
-      data: { isActive: false },
+      data: {
+        isActive: false,
+        accessToken: '',
+        refreshToken: null,
+        tokenExpiry: null,
+      },
     });
 
     return res.json({
       success: true,
-      message: `${platformName} disconnected`,
+      message: `${platformName} נותק בהצלחה`,
+      data: { platform: platformName, status: 'not_connected' },
     });
   } catch (error: any) {
     return res.status(500).json({

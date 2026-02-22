@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { autoPublishService } from '../services/auto-publish.service';
 import prisma from '../db/database';
 import { mzivService } from '../services/mziv.service';
+import { oauthService } from '../services/oauth.service';
 
 const router = Router();
 
@@ -69,9 +70,9 @@ router.post('/all', async (req: Request, res: Response) => {
     const platformStatuses: Record<string, any> = {};
     for (const target of requestedTargets) {
       if (connectedPlatforms.includes(target)) {
-        platformStatuses[target] = { status: 'queued', url: null, error: null };
+        platformStatuses[target] = { status: 'queued', url: null, error: null, message: null };
       } else {
-        platformStatuses[target] = { status: 'skipped', url: null, error: 'not_connected' };
+        platformStatuses[target] = { status: 'skipped', url: null, error: 'not_connected', message: `${target} לא מחובר — חברי אותו קודם` };
       }
     }
 
@@ -121,6 +122,42 @@ router.post('/all', async (req: Request, res: Response) => {
       for (const account of connectedAccounts) {
         const platform = account.platform;
         try {
+          // Auto-refresh token if expired
+          let accessToken = account.accessToken;
+          if (account.tokenExpiry && account.tokenExpiry < new Date()) {
+            if (account.refreshToken) {
+              const refreshPlatform = platform === 'facebook_page' ? 'facebook' : platform;
+              const newTokens = await oauthService.refreshAccessToken(refreshPlatform, account.refreshToken);
+              if (newTokens) {
+                accessToken = newTokens.access_token;
+                const newExpiry = newTokens.expires_in ? new Date(Date.now() + newTokens.expires_in * 1000) : null;
+                await prisma.socialAccount.update({
+                  where: { id: account.id },
+                  data: {
+                    accessToken: newTokens.access_token,
+                    refreshToken: newTokens.refresh_token || account.refreshToken,
+                    tokenExpiry: newExpiry,
+                  },
+                });
+                console.log(`[publish] Refreshed token for ${platform}`);
+              } else {
+                platformStatuses[platform] = { status: 'failed', url: null, error: 'reauth_required', message: 'הטוקן פג תוקף — צריך להתחבר מחדש' };
+                await prisma.publishJob.update({
+                  where: { id: job.id },
+                  data: { platformStatuses: JSON.stringify(platformStatuses) },
+                });
+                continue;
+              }
+            } else {
+              platformStatuses[platform] = { status: 'failed', url: null, error: 'expired_token', message: 'הטוקן פג תוקף ואין refresh token' };
+              await prisma.publishJob.update({
+                where: { id: job.id },
+                data: { platformStatuses: JSON.stringify(platformStatuses) },
+              });
+              continue;
+            }
+          }
+
           platformStatuses[platform] = { status: 'publishing', url: null, error: null };
           await prisma.publishJob.update({
             where: { id: job.id },
@@ -129,7 +166,7 @@ router.post('/all', async (req: Request, res: Response) => {
 
           const result = await autoPublishService.publishToPlatformWithToken(
             platform,
-            account.accessToken,
+            accessToken,
             account.accountId,
             {
               caption: postPack?.by_platform?.[platform === 'facebook_page' ? 'facebook' : platform]?.caption || video_description,
@@ -141,12 +178,12 @@ router.post('/all', async (req: Request, res: Response) => {
           );
 
           if (result.success) {
-            platformStatuses[platform] = { status: 'published', url: result.post_url || null, error: null };
+            platformStatuses[platform] = { status: 'published', url: result.post_url || null, error: null, message: 'פורסם בהצלחה ✅' };
           } else {
-            platformStatuses[platform] = { status: 'failed', url: null, error: result.error || 'unknown_error' };
+            platformStatuses[platform] = { status: 'failed', url: null, error: result.error || 'unknown_error', message: `נכשל: ${result.error}` };
           }
         } catch (e: any) {
-          platformStatuses[platform] = { status: 'failed', url: null, error: e.message };
+          platformStatuses[platform] = { status: 'failed', url: null, error: e.message, message: `שגיאה: ${e.message}` };
         }
 
         await prisma.publishJob.update({
@@ -215,12 +252,38 @@ router.get('/job-status', async (req: Request, res: Response) => {
 
     const platformStatuses = JSON.parse(job.platformStatuses);
 
+    // Build Shortcut-friendly summary
+    const entries = Object.entries(platformStatuses);
+    const published = entries.filter(([, v]: any) => (v as any).status === 'published');
+    const failed = entries.filter(([, v]: any) => (v as any).status === 'failed');
+    const pending = entries.filter(([, v]: any) => ['queued', 'publishing'].includes((v as any).status));
+    const skipped = entries.filter(([, v]: any) => (v as any).status === 'skipped');
+    const done = pending.length === 0;
+
+    // Build display lines for Shortcut
+    const displayLines = entries.map(([platform, info]: any) => {
+      const icon = info.status === 'published' ? '✅' : info.status === 'failed' ? '❌' : info.status === 'skipped' ? '⏭️' : '⏳';
+      const urlPart = info.url ? ` → ${info.url}` : '';
+      const errorPart = info.error && info.status === 'failed' ? ` (${info.error})` : '';
+      return `${icon} ${platform}${urlPart}${errorPart}`;
+    });
+
     return res.json({
       success: true,
       data: {
         job_id: job.id,
         status: job.status,
+        done,
         platforms: platformStatuses,
+        summary: {
+          published: published.length,
+          failed: failed.length,
+          pending: pending.length,
+          skipped: skipped.length,
+          total: entries.length,
+        },
+        display: displayLines.join('\n'),
+        links: published.map(([platform, info]: any) => ({ platform, url: (info as any).url })).filter((l: any) => l.url),
         created_at: job.createdAt,
         updated_at: job.updatedAt,
       },

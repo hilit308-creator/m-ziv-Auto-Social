@@ -63,7 +63,14 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     }
 
     const { file } = req;
-    const publicUrl = `${req.protocol}://${req.get('host')}/uploads/${file.filename}`;
+    // Use BASE_URL or RAILWAY_PUBLIC_DOMAIN for production, fallback to request host
+    let baseUrl = `${req.protocol}://${req.get('host')}`;
+    if (process.env.BASE_URL) {
+      baseUrl = process.env.BASE_URL;
+    } else if (process.env.RAILWAY_PUBLIC_DOMAIN) {
+      baseUrl = `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`;
+    }
+    const publicUrl = `${baseUrl}/uploads/${file.filename}`;
 
     // Save to DB
     const media = await prisma.mediaUpload.create({
@@ -226,6 +233,32 @@ router.post('/attach', async (req: Request, res: Response) => {
       error: error.message || 'Failed to attach media',
     });
   }
+});
+
+// Multer error handler — clear Hebrew messages for Shortcut
+router.use((err: any, _req: Request, res: Response, next: NextFunction) => {
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({
+        success: false,
+        error: 'הקובץ גדול מדי (500MB מקסימום)',
+        error_code: 'file_too_large',
+      });
+    }
+    return res.status(400).json({
+      success: false,
+      error: `שגיאת העלאה: ${err.message}`,
+      error_code: 'upload_error',
+    });
+  }
+  if (err && err.message && err.message.includes('Unsupported file type')) {
+    return res.status(400).json({
+      success: false,
+      error: `פורמט לא נתמך. נתמכים: MP4, MOV, WebM, JPEG, PNG, WebP`,
+      error_code: 'invalid_format',
+    });
+  }
+  next(err);
 });
 
 export default router;
