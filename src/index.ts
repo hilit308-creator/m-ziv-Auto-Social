@@ -66,6 +66,9 @@ app.use('/api/', (req: Request, _res: Response, next: NextFunction) => {
   next();
 });
 
+// OAuth Connect routes (for Shortcut) — MUST be before mzivRoutes to avoid auth on callbacks
+app.use('/api/v1/connect', connectRoutes);
+
 // M-Ziv AI Social routes
 app.use('/api/v1', mzivRoutes);
 
@@ -89,9 +92,6 @@ app.use('/api/scheduler', schedulerRoutes);
 
 // Social auth routes
 app.use('/api/auth', authRoutes);
-
-// OAuth Connect routes (for Shortcut)
-app.use('/api/v1/connect', connectRoutes);
 
 // Auto-publish routes
 app.use('/api/publish', publishRoutes);

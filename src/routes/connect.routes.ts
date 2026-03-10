@@ -1,46 +1,134 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { oauthService } from '../services/oauth.service';
+import { authService } from '../services/auth.service';
 import prisma from '../db/database';
+import * as crypto from 'crypto';
 
 const router = Router();
 
-// Middleware for API key authentication (supports both Bearer and x-api-key)
-const authenticateApiKey = (req: Request, res: Response, next: NextFunction) => {
-  const apiKey = 
-    req.headers['x-api-key'] as string ||
-    req.headers.authorization?.replace('Bearer ', '');
-  
-  if (!apiKey || apiKey !== process.env.MZIV_API_KEY) {
-    return res.status(401).json({
-      success: false,
-      error: 'Unauthorized - Invalid or missing API key',
-    });
-  }
-  
-  next();
-};
+// In-memory state store for OAuth (maps state → userId)
+// In production, use Redis or DB. TTL: 10 minutes.
+const oauthStateStore = new Map<string, { userId: string; provider: string; createdAt: number }>();
 
-// All connect routes require API key (except callback which is called by OAuth provider)
-router.use((req: Request, res: Response, next: NextFunction) => {
-  // Skip auth for callback routes (they come from OAuth providers)
-  if (req.path.includes('/callback')) {
+// Clean up expired states every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  Array.from(oauthStateStore.entries()).forEach(([key, val]) => {
+    if (now - val.createdAt > 10 * 60 * 1000) oauthStateStore.delete(key);
+  });
+}, 5 * 60 * 1000);
+
+// Flexible auth middleware: supports JWT (Bearer token) and API key (x-api-key)
+// Sets (req as any).userId if authenticated
+const authenticateFlexible = async (req: Request, res: Response, next: NextFunction) => {
+  // 1. Try JWT first (Authorization: Bearer <jwt>)
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.split(' ')[1];
+    // Check if it's a JWT (not the API key)
+    if (token !== process.env.MZIV_API_KEY) {
+      try {
+        const { userId } = authService.verifyToken(token);
+        (req as any).userId = userId;
+        return next();
+      } catch {
+        // Not a valid JWT — fall through to API key check
+      }
+    }
+  }
+
+  // 2. Try API key (x-api-key header or Bearer with API key value)
+  const apiKey =
+    req.headers['x-api-key'] as string ||
+    (authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : undefined);
+
+  if (apiKey && apiKey === process.env.MZIV_API_KEY) {
+    // API key auth — resolve to default user
+    let user = await prisma.user.findFirst();
+    if (!user) {
+      user = await prisma.user.create({
+        data: { email: 'mziv@default.com', password: 'oauth-only', name: 'M-Ziv' },
+      });
+    }
+    (req as any).userId = user.id;
     return next();
   }
-  return authenticateApiKey(req, res, next);
+
+  return res.status(401).json({
+    success: false,
+    error: 'Unauthorized - Provide a valid JWT token (Bearer) or API key (x-api-key)',
+  });
+};
+
+// All connect routes require auth (except callback and start-public which are public)
+router.use((req: Request, res: Response, next: NextFunction) => {
+  if (req.path.includes('/callback') || req.path.includes('/start-public')) {
+    return next();
+  }
+  return authenticateFlexible(req, res, next);
 });
 
 const VALID_PROVIDERS = ['instagram', 'facebook', 'tiktok', 'youtube'];
-const DEFAULT_USER_ID = 'default-user';
 
-// GET /connect/status - Get connection status for all platforms
-router.get('/status', async (_req: Request, res: Response) => {
+// GET /connect/youtube/start-public - Public endpoint for YouTube OAuth (no auth required)
+// Creates a one-time state, stores userId (default user), and redirects to Google OAuth
+router.get('/youtube/start-public', async (_req: Request, res: Response) => {
   try {
+    if (!oauthService.isConfigured('youtube')) {
+      return res.status(400).json({
+        success: false,
+        error: 'YouTube is not configured. Set YOUTUBE_CLIENT_ID, YOUTUBE_CLIENT_SECRET, YOUTUBE_REDIRECT_URI.',
+      });
+    }
+
+    // Resolve default user
+    let user = await prisma.user.findFirst();
+    if (!user) {
+      user = await prisma.user.create({
+        data: { email: 'mziv@default.com', password: 'oauth-only', name: 'M-Ziv' },
+      });
+    }
+
+    // Generate one-time state with userId
+    const stateToken = crypto.randomBytes(20).toString('hex');
+    oauthStateStore.set(stateToken, { userId: user.id, provider: 'youtube', createdAt: Date.now() });
+
+    const authUrl = oauthService.getAuthorizationUrl('youtube', stateToken);
+
+    if (!authUrl) {
+      oauthStateStore.delete(stateToken);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to generate YouTube auth URL',
+      });
+    }
+
+    console.log(`[connect] Public YouTube OAuth started, user=${user.id}, state=${stateToken.slice(0, 8)}...`);
+
+    // Redirect directly to Google OAuth
+    return res.redirect(authUrl);
+  } catch (error: any) {
+    console.error('Error starting public YouTube OAuth:', error);
+    return res.status(500).send(`
+      <html><body style="font-family:sans-serif;text-align:center;padding:40px;">
+        <h2>❌ שגיאה בהתחלת חיבור</h2>
+        <p>${error.message}</p>
+      </body></html>
+    `);
+  }
+});
+
+// GET /connect/status - Get connection status for all platforms (per user)
+router.get('/status', async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).userId;
     const platforms: Record<string, any> = {};
 
     for (const provider of VALID_PROVIDERS) {
       const platformKey = provider === 'facebook' ? 'facebook_page' : provider;
       const account = await prisma.socialAccount.findFirst({
         where: {
+          userId,
           platform: platformKey,
           isActive: true,
         },
@@ -97,10 +185,11 @@ router.get('/status', async (_req: Request, res: Response) => {
   }
 });
 
-// GET /connect/:provider/start - Start OAuth flow for a provider
+// GET /connect/:provider/start - Start OAuth flow for a provider (encodes userId in state)
 router.get('/:provider/start', async (req: Request, res: Response) => {
   try {
     const { provider } = req.params;
+    const userId = (req as any).userId;
 
     if (!VALID_PROVIDERS.includes(provider)) {
       return res.status(400).json({
@@ -116,22 +205,28 @@ router.get('/:provider/start', async (req: Request, res: Response) => {
       });
     }
 
-    const state = `${provider}_${Date.now()}`;
-    const authUrl = oauthService.getAuthorizationUrl(provider, state);
+    // Generate secure random state and store userId mapping
+    const stateToken = crypto.randomBytes(20).toString('hex');
+    oauthStateStore.set(stateToken, { userId, provider, createdAt: Date.now() });
+
+    const authUrl = oauthService.getAuthorizationUrl(provider, stateToken);
 
     if (!authUrl) {
+      oauthStateStore.delete(stateToken);
       return res.status(500).json({
         success: false,
         error: `Failed to generate auth URL for ${provider}`,
       });
     }
 
+    console.log(`[connect] OAuth started for ${provider}, user=${userId}, state=${stateToken.slice(0, 8)}...`);
+
     return res.json({
       success: true,
       data: {
         auth_url: authUrl,
         provider,
-        state,
+        state: stateToken,
       },
     });
   } catch (error: any) {
@@ -166,6 +261,27 @@ router.get('/:provider/callback', async (req: Request, res: Response) => {
           <p>את יכולה לסגור את הדף הזה ולנסות שוב מה-Shortcut.</p>
         </body></html>
       `);
+    }
+
+    // Resolve userId from state parameter
+    let userId: string | null = null;
+    const stateStr = state as string | undefined;
+
+    if (stateStr && oauthStateStore.has(stateStr)) {
+      const stateData = oauthStateStore.get(stateStr)!;
+      userId = stateData.userId;
+      oauthStateStore.delete(stateStr); // One-time use
+      console.log(`[connect] Callback for ${provider}, resolved user=${userId} from state`);
+    } else {
+      // Fallback: no valid state — use default user (backward compat)
+      console.warn(`[connect] Callback for ${provider}: no valid state, falling back to default user`);
+      let defaultUser = await prisma.user.findFirst();
+      if (!defaultUser) {
+        defaultUser = await prisma.user.create({
+          data: { email: 'mziv@default.com', password: 'oauth-only', name: 'M-Ziv' },
+        });
+      }
+      userId = defaultUser.id;
     }
 
     // Exchange code for tokens
@@ -238,22 +354,10 @@ router.get('/:provider/callback', async (req: Request, res: Response) => {
       console.warn(`Could not fetch account info for ${provider}:`, infoError);
     }
 
-    // Ensure a default user exists
-    let user = await prisma.user.findFirst();
-    if (!user) {
-      user = await prisma.user.create({
-        data: {
-          email: 'mziv@default.com',
-          password: 'oauth-only',
-          name: 'M-Ziv',
-        },
-      });
-    }
-
-    // Upsert social account
+    // Upsert social account for the resolved user
     const existing = await prisma.socialAccount.findFirst({
       where: {
-        userId: user.id,
+        userId,
         platform: platformName,
       },
     });
@@ -273,7 +377,7 @@ router.get('/:provider/callback', async (req: Request, res: Response) => {
     } else {
       await prisma.socialAccount.create({
         data: {
-          userId: user.id,
+          userId,
           platform: platformName,
           accountId,
           accountName,
@@ -285,7 +389,7 @@ router.get('/:provider/callback', async (req: Request, res: Response) => {
       });
     }
 
-    console.log(`[connect] ${platformName} connected successfully (account: ${accountName})`);
+    console.log(`[connect] ${platformName} connected for user=${userId} (account: ${accountName})`);
 
     // Return a nice HTML page that the user sees after OAuth
     return res.send(`
@@ -307,14 +411,15 @@ router.get('/:provider/callback', async (req: Request, res: Response) => {
   }
 });
 
-// POST /connect/:provider/disconnect - Disconnect a provider
+// POST /connect/:provider/disconnect - Disconnect a provider (per user)
 router.post('/:provider/disconnect', async (req: Request, res: Response) => {
   try {
     const { provider } = req.params;
+    const userId = (req as any).userId;
     const platformName = provider === 'facebook' ? 'facebook_page' : provider;
 
     const account = await prisma.socialAccount.findFirst({
-      where: { platform: platformName, isActive: true },
+      where: { userId, platform: platformName, isActive: true },
     });
 
     if (!account) {
