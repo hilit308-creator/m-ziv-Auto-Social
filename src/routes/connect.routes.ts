@@ -118,17 +118,28 @@ router.get('/youtube/start-public', async (_req: Request, res: Response) => {
   }
 });
 
-// GET /connect/status - Get connection status for all platforms (per user)
-router.get('/status', async (req: Request, res: Response) => {
+// GET /connect/debug - Debug: show all social accounts in DB (temporary)
+router.get('/debug', async (_req: Request, res: Response) => {
   try {
-    const userId = (req as any).userId;
+    const accounts = await prisma.socialAccount.findMany({
+      select: { id: true, platform: true, accountName: true, accountId: true, isActive: true, userId: true, tokenExpiry: true },
+    });
+    const users = await prisma.user.findMany({ select: { id: true, email: true, name: true } });
+    return res.json({ success: true, data: { accounts, users } });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// GET /connect/status - Get connection status for all platforms
+router.get('/status', async (_req: Request, res: Response) => {
+  try {
     const platforms: Record<string, any> = {};
 
     for (const provider of VALID_PROVIDERS) {
       const platformKey = provider === 'facebook' ? 'facebook_page' : provider;
       const account = await prisma.socialAccount.findFirst({
         where: {
-          userId,
           platform: platformKey,
           isActive: true,
         },
