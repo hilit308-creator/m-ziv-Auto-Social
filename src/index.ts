@@ -27,7 +27,20 @@ import spamRoutes from './routes/spam.routes';
 import connectRoutes from './routes/connect.routes';
 import path from 'path';
 
+import fs from 'fs';
+
 dotenv.config();
+
+// Ensure SQLite data directory exists (important for Railway volumes)
+const dbUrl = process.env.DATABASE_URL || '';
+const dbMatch = dbUrl.match(/file:(.*)/);
+if (dbMatch) {
+  const dbDir = path.dirname(dbMatch[1]);
+  if (!fs.existsSync(dbDir)) {
+    fs.mkdirSync(dbDir, { recursive: true });
+    console.log(`📁 Created database directory: ${dbDir}`);
+  }
+}
 
 const app = express();
 const PORT = process.env.PORT || 3000;
