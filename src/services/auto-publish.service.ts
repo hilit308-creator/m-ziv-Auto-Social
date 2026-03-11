@@ -489,9 +489,19 @@ export class AutoPublishService {
           return { platform, success: false, error: 'YouTube requires a video' };
         }
 
+        // Step 1: Download the video from mediaUrl
+        console.log(`[publish] YouTube: downloading video from ${content.mediaUrl}`);
+        const videoResponse = await axios.get(content.mediaUrl, {
+          responseType: 'arraybuffer',
+          timeout: 120000,
+        });
+        const videoBuffer = Buffer.from(videoResponse.data);
+        const videoSize = videoBuffer.length;
+        console.log(`[publish] YouTube: video downloaded, size=${(videoSize / 1024 / 1024).toFixed(1)}MB`);
+
         const metadata = {
           snippet: {
-            title: content.title || content.caption.substring(0, 60),
+            title: content.title || content.caption.substring(0, 100),
             description: content.description || fullCaption,
             tags: content.hashtags?.map(h => h.replace('#', '')) || [],
             categoryId: '22',
@@ -502,24 +512,45 @@ export class AutoPublishService {
           },
         };
 
-        const response = await axios.post(
+        // Step 2: Initiate resumable upload
+        const initResponse = await axios.post(
           'https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status',
           metadata,
           {
             headers: {
               'Authorization': `Bearer ${accessToken}`,
               'Content-Type': 'application/json',
+              'X-Upload-Content-Length': videoSize.toString(),
               'X-Upload-Content-Type': 'video/*',
             },
           }
         );
 
-        const uploadUrl = response.headers['location'];
+        const uploadUrl = initResponse.headers['location'];
+        if (!uploadUrl) {
+          return { platform, success: false, error: 'YouTube did not return an upload URL' };
+        }
+
+        // Step 3: Upload the video binary
+        console.log(`[publish] YouTube: uploading video to resumable URL...`);
+        const uploadResponse = await axios.put(uploadUrl, videoBuffer, {
+          headers: {
+            'Content-Type': 'video/*',
+            'Content-Length': videoSize.toString(),
+          },
+          maxContentLength: Infinity,
+          maxBodyLength: Infinity,
+          timeout: 300000,
+        });
+
+        const videoId = uploadResponse.data?.id;
+        console.log(`[publish] YouTube: upload complete, videoId=${videoId}`);
+
         return {
           platform,
           success: true,
-          post_id: 'pending-upload',
-          post_url: uploadUrl || 'https://youtube.com',
+          post_id: videoId || 'uploaded',
+          post_url: videoId ? `https://www.youtube.com/watch?v=${videoId}` : 'https://youtube.com',
         };
       }
 
